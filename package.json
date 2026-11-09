@@ -1,0 +1,18 @@
+{
+  "name": "community-living-room",
+  "private": true,
+  "version": "1.0.0",
+  "description": "社區客廳 3D 導覽地圖（GitHub Pages 靜態網頁）",
+  "type": "module",
+  "scripts": {
+    "check": "node tools/check-data.mjs",
+    "qr": "node tools/make-qr.mjs",
+    "test": "node --test tests/model.test.mjs",
+    "e2e": "node tests/e2e.mjs",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "qrcode": "1.5.4",
+    "three": "0.128.0"
+  }
+}

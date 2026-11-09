@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>社區客廳｜3D 導覽地圖</title>
+<meta name="description" content="用手機睇社區客廳有咩設施、喺邊度、點樣用：3D 地圖、自動導覽、第一身漫遊同平面圖。">
+<meta name="theme-color" content="#FBE9D3">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/style.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 15.5 16 6l11 9.5V26a2 2 0 0 1-2 2h-5.5v-7h-7v7H7a2 2 0 0 1-2-2z" fill="currentColor"/></svg></span>
+    <div class="brand-text"><h1 id="title">社區客廳</h1><p id="subtitle">3D 導覽地圖</p></div>
+  </div>
+  <button type="button" class="top-btn" id="info-btn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 10.5v6.5M12 7.2v.1" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>資料</button>
+</header>
+<p class="draft" id="draft" hidden></p>
+
+<main class="stage">
+  <section class="view view-3d" id="view-3d" aria-label="3D 地圖">
+    <div class="v3-canvas" id="v3-canvas"></div>
+    <div class="v3-pins" id="v3-pins"></div>
+    <svg class="minimap" id="minimap" hidden role="img" aria-label="小地圖：撳一下可以去嗰度"></svg>
+    <div class="v3-msg" id="v3-msg" role="status">
+      <div class="msg-card">
+        <p class="msg-text" id="v3-msg-text">載入緊 3D 模型…</p>
+        <div class="msg-actions" id="v3-msg-actions" hidden>
+          <button type="button" class="btn primary" id="v3-retry">再試一次</button>
+          <button type="button" class="btn" data-goto="plan">改睇平面圖</button>
+          <button type="button" class="btn" data-goto="list">睇設施列表</button>
+        </div>
+      </div>
+    </div>
+    <div class="v3-tools" id="v3-tools" hidden>
+      <button type="button" class="pill-btn" id="btn-walls" aria-pressed="false">顯示完整牆身</button>
+      <button type="button" class="pill-btn" id="btn-reset">返回全景</button>
+    </div>
+    <p class="hint" id="hint" hidden>撳彩色圖示睇設施資料<br><span>一指拖動轉角度・兩指放大縮細</span></p>
+
+    <div class="tourbar" id="tourbar" hidden aria-live="polite">
+      <div class="tour-progress" aria-hidden="true"><i id="tour-bar"></i></div>
+      <div class="tour-head">
+        <span class="tour-step" id="tour-step">1 / 1</span>
+        <button type="button" class="link-btn" id="tour-more">睇詳情</button>
+      </div>
+      <h2 class="tour-title" id="tour-title"></h2>
+      <p class="tour-text" id="tour-text"></p>
+      <div class="tour-ctrl" id="tour-ctrl">
+        <button type="button" class="btn" id="tour-prev" aria-label="上一個設施">⏮<span>上一個</span></button>
+        <button type="button" class="btn primary" id="tour-play">⏸<span>暫停</span></button>
+        <button type="button" class="btn" id="tour-next" aria-label="跳去下一個設施">⏭<span>下一個</span></button>
+        <button type="button" class="btn icon" id="tour-stop" aria-label="結束導覽">✕</button>
+      </div>
+      <div class="tour-ctrl" id="tour-done" hidden>
+        <button type="button" class="btn primary" id="tour-again">再睇一次</button>
+        <button type="button" class="btn" id="tour-exit">返回 3D 地圖</button>
+      </div>
+    </div>
+
+    <div class="walkui" id="walkui" hidden>
+      <p class="walk-hint" id="walk-hint"></p>
+      <button type="button" class="pill-btn walk-home" id="walk-home">返回起點</button>
+      <div class="dpad" role="group" aria-label="行路掣">
+        <button type="button" data-wk="f" aria-label="向前行">▲</button>
+        <button type="button" data-wk="l" aria-label="向左行">◀</button>
+        <button type="button" data-wk="b" aria-label="向後行">▼</button>
+        <button type="button" data-wk="r" aria-label="向右行">▶</button>
+      </div>
+      <div class="turnpad" role="group" aria-label="轉身掣">
+        <button type="button" data-wk="tl" aria-label="向左轉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5 4 9.5 9 14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 9.5H14a6 6 0 0 1 0 12h-2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg><span>左轉</span></button>
+        <button type="button" data-wk="tr" aria-label="向右轉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 5 4.5-5 4.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.5 9.5H10a6 6 0 0 0 0 12h2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg><span>右轉</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="view view-plan" id="view-plan" hidden aria-label="平面圖"></section>
+
+  <section class="view view-list" id="view-list" hidden aria-label="設施列表">
+    <h2 class="list-title">設施一覽</h2>
+    <ol class="flist" id="flist"></ol>
+  </section>
+</main>
+
+<nav class="tabs" role="tablist" aria-label="功能">
+  <button type="button" role="tab" data-tab="3d"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 20.5 7.5v9L12 21.2 3.5 16.5v-9z M3.8 7.6 12 12l8.2-4.4M12 12v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>3D 地圖</span></button>
+  <button type="button" role="tab" data-tab="tour"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 8.2v7.6l6-3.8z" fill="currentColor"/></svg><span>自動導覽</span></button>
+  <button type="button" role="tab" data-tab="walk"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4.2" r="2.2" fill="currentColor"/><path d="M12.5 8.2 9.5 10l-1.8 3.5M12.5 8.2l-1 5.3 3 3 1 4.7M11.5 13.5l-2.4 3.4-2.6 4.3M12.5 8.2l2.5 2.6 3 .9" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span>漫遊</span></button>
+  <button type="button" role="tab" data-tab="plan"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.5" width="18" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 11H11V3.8M11 14.5v6M15 11h5.5" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>平面圖</span></button>
+  <button type="button" role="tab" data-tab="list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="4.5" cy="6.5" r="1.6" fill="currentColor"/><circle cx="4.5" cy="12" r="1.6" fill="currentColor"/><circle cx="4.5" cy="17.5" r="1.6" fill="currentColor"/></svg><span>設施</span></button>
+</nav>
+
+<div class="sheet" id="card" hidden>
+  <div class="sheet-backdrop" data-close></div>
+  <article class="sheet-panel card" role="dialog" aria-modal="true" aria-labelledby="card-title">
+    <button type="button" class="close-btn" data-close aria-label="關閉">✕</button>
+    <div class="card-photo" id="card-photo"></div>
+    <div class="card-body">
+      <p class="card-kicker" id="card-kicker"></p>
+      <h2 class="card-title" id="card-title"></h2>
+      <p class="card-summary" id="card-summary"></p>
+      <dl class="card-rows" id="card-rows"></dl>
+      <div class="card-actions">
+        <button type="button" class="btn primary" data-act="show3d">喺 3D 地圖睇位置</button>
+        <button type="button" class="btn" data-act="showplan">喺平面圖睇</button>
+      </div>
+    </div>
+  </article>
+</div>
+
+<div class="sheet" id="info" hidden>
+  <div class="sheet-backdrop" data-close></div>
+  <article class="sheet-panel info" role="dialog" aria-modal="true" aria-labelledby="info-title">
+    <button type="button" class="close-btn" data-close aria-label="關閉">✕</button>
+    <div class="info-body" id="info-body"></div>
+  </article>
+</div>
+
+<div class="fatal" id="fatal" hidden role="alert"></div>
+<noscript><p class="fatal">呢個網頁要開啟 JavaScript 先睇到。</p></noscript>
+</body>
+</html>

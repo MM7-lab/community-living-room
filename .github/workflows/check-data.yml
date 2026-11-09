@@ -1,0 +1,21 @@
+name: 檢查資料檔
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 檢查 center.json 同 plan.json（格式、位置、相片、私隱）
+        run: node tools/check-data.mjs
+      - name: 平面圖計算測試（門窗、碰撞、設施位置）
+        run: node --test tests/model.test.mjs
