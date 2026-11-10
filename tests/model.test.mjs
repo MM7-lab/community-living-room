@@ -19,10 +19,13 @@ test('每道門同每個窗都準確對應一幅牆', () => {
   }
 });
 
-test('設施資料冇錯，入口係第一站', () => {
+test('設施資料冇錯，入口係第一站，官方 8 項設施齊晒', () => {
   const d = normalizeCenter(center, plan);
   assert.deepEqual(d.errors, []);
   assert.equal(d.facilities[0].id, 'entrance');
+  const names = d.facilities.map(f => f.name);
+  ['社區廚房', '洗衣及乾衣機', '按摩椅', '健身設備', '大電視', '圖書閣', '兒童遊樂室', '咖啡沖調設備區'].forEach(n => assert.ok(names.includes(n), `缺少 ${n}`));
+  assert.equal(new Set(d.facilities.map(f => f.color)).size, d.facilities.length, '設施顏色重複');
   d.facilities.forEach(f => assert.ok(insideBuilding(plan, f.at), `${f.name} 喺平面圖外面`));
 });
 
@@ -67,10 +70,12 @@ test('實心牆會遮住設施標記，玻璃牆唔會', () => {
 
 test('撳平面圖揀設施：點優先，再睇範圍', () => {
   const d = normalizeCenter(center, plan);
-  assert.equal(facilityAt(d.facilities, { x: 585, y: 185 })?.id, 'signin');
   assert.equal(facilityAt(d.facilities, { x: 700, y: 130 })?.id, 'entrance');
-  assert.equal(facilityAt(d.facilities, { x: 800, y: 1200 })?.id, 'glassroom');
-  assert.equal(facilityAt(d.facilities, { x: 100, y: 1000 }), null);
+  assert.equal(facilityAt(d.facilities, { x: 725, y: 1170 })?.id, 'massage', '按摩椅（點）喺大電視範圍入面，點要優先');
+  assert.equal(facilityAt(d.facilities, { x: 850, y: 800 })?.id, 'tv');
+  assert.equal(facilityAt(d.facilities, { x: 100, y: 1450 })?.id, 'kids');
+  assert.equal(facilityAt(d.facilities, { x: 850, y: 1450 })?.id, 'laundry');
+  assert.equal(facilityAt(d.facilities, { x: 300, y: 300 }), null);
 });
 
 test('相片路徑：只接受相對路徑或者 https', () => {

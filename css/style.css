@@ -40,7 +40,7 @@ h1, h2, h3, p { margin: 0; }
 .logo { flex: none; width: 42px; height: 42px; border-radius: 14px; background: var(--primary); color: #fff; display: grid; place-items: center; }
 .logo svg { width: 26px; height: 26px; }
 .brand-text { min-width: 0; }
-.brand h1 { font-size: 22px; line-height: 1.2; font-weight: 800; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand h1 { font-size: 21px; line-height: 1.25; font-weight: 800; letter-spacing: .01em; text-wrap: balance; word-break: keep-all; overflow-wrap: anywhere; }
 .brand p { font-size: 15px; color: var(--muted); line-height: 1.3; }
 .top-btn {
   flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 14px;
@@ -237,6 +237,7 @@ h1, h2, h3, p { margin: 0; }
 .frow-hours { font-size: 16px; color: var(--muted); }
 .frow-go { font-size: 30px; color: var(--muted); line-height: 34px; }
 .tag { display: inline-block; vertical-align: middle; font-size: 14px; font-weight: 800; padding: 2px 9px; border-radius: 999px; background: #FDE2D2; color: #9A3C12; margin-left: 6px; }
+.tag.soft { background: #FFF3C4; color: #6A4A12; }
 
 /* ---------- 底部功能列 ---------- */
 .tabs {

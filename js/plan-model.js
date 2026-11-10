@@ -247,7 +247,7 @@ export function lineBlocked(p, q, col) {
 }
 
 /* ---------- 中心同設施資料 ---------- */
-const PALETTE = ['#E07A3F', '#D9A23A', '#6FA36F', '#4F94B8', '#B7739B', '#C8694F', '#8C7BC0', '#3E9C8F'];
+const PALETTE = ['#E07A3F', '#D9A23A', '#6FA36F', '#4F94B8', '#B7739B', '#C8694F', '#8C7BC0', '#3E9C8F', '#A0784F', '#5C86C9'];
 const str = (v, max = 400) => typeof v === 'string' ? v.trim().slice(0, max) : (v == null ? '' : String(v).trim().slice(0, max));
 function xy(v) {
   if (Array.isArray(v) && v.length >= 2 && isNum(v[0]) && isNum(v[1])) return { x: +v[0], y: +v[1] };
@@ -301,7 +301,7 @@ export function normalizeCenter(raw, plan) {
       summary: str(f.summary, 400), hours: str(f.hours, 200), booking: str(f.booking, 200),
       photo: safeUrl(f.photo), photoAlt: str(f.photoAlt, 120),
       tour: str(f.tour, 400), seconds: isNum(f.seconds) ? Math.min(60, Math.max(3, +f.seconds)) : null,
-      staffOnly: f.staffOnly === true, at: at || { x: 0, y: 0 }, area, radius: isNum(f.radius) ? +f.radius : 150, view, color,
+      staffOnly: f.staffOnly === true, tentative: f.tentative === true, at: at || { x: 0, y: 0 }, area, radius: isNum(f.radius) ? +f.radius : 150, view, color,
     });
     if (f.photo && !safeUrl(f.photo)) errors.push(`${label}嘅相片路徑（photo）唔安全或者唔正確，請用 photos/xxx.jpg。`);
   });
@@ -309,7 +309,8 @@ export function normalizeCenter(raw, plan) {
   const start = { at: xy(s.at), lookAt: xy(s.lookAt) };
   if (s.at != null && !start.at) errors.push('漫遊起點（start.at）要寫做 [x, y]。');
   const pending = facilities.filter(f => !f.summary || !(f.hours || f.booking)).length;
-  return { center, facilities, start, updated: str(raw.updated, 20), draft: raw.draft === true || pending > 0, pending, errors, warnings };
+  const tentative = facilities.filter(f => f.tentative).length;
+  return { center, facilities, start, updated: str(raw.updated, 20), draft: raw.draft === true || pending > 0 || tentative > 0, pending, tentative, errors, warnings };
 }
 
 // 設施嘅導覽時間：按字數計，長者睇字慢啲，所以寬鬆啲。

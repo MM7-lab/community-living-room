@@ -104,11 +104,21 @@ await check('2. 每個設施都撳得到，資料卡有名稱、簡介、時間�
 await check('2b. 撳 3D 模型本身（唔係標記）都揀到設施', async () => {
   await page.click('[data-tab="3d"]');
   await sleep(500);
-  // 撳玻璃房標記正下方 40px（即係房入面嘅地板，唔係標記本身）。
-  const box = await page.locator('.pin[data-fid="glassroom"]').boundingBox();
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height + 40);
+  // 撳休憩區（玻璃房）入面嘅地板，唔係標記本身。
+  // 喺休憩區入面搵一點：離牆同按摩椅有啲距離，而且冇標記遮住。
+  const pt = await page.evaluate(() => {
+    const v = window.__clr.S.view, r = document.querySelector('#v3-canvas canvas').getBoundingClientRect();
+    for (let y = 790; y <= 1230; y += 20) for (let x = 680; x <= 850; x += 20) {
+      if (Math.hypot(x - 720, y - 1180) < 130) continue;
+      const p = v.screenOf(x, y), sx = r.left + p.x, sy = r.top + p.y;
+      if (document.elementFromPoint(sx, sy)?.tagName === 'CANVAS') return { x: sx, y: sy };
+    }
+    return null;
+  });
+  assert.ok(pt, '休憩區全部俾標記遮住，搵唔到位置試撳');
+  await page.mouse.click(pt.x, pt.y);
   await page.waitForSelector('#card:not([hidden])', { timeout: 3000 });
-  assert.ok((await page.textContent('#card-title')).includes('玻璃房'));
+  assert.ok((await page.textContent('#card-title')).includes('大電視'));
   await page.click('#card .close-btn');
 });
 
@@ -231,9 +241,9 @@ await ctx.close();
   const { ctx, page, errors } = await openPage({ viewport: { width: 1280, height: 800 } }, { hash: '#walk' });
   await check('4c. 漫遊：電腦用 WASD 行得，唔會穿牆', async () => {
     await page.waitForSelector('#walkui:not([hidden])');
-    await page.mouse.click(640, 300);
+    // 測試機用軟件模擬 3D（大約每秒十幾格），所以㩒耐啲。
     const s0 = await page.evaluate(() => window.__clr.S.view.walkState());
-    await page.keyboard.down('w'); await sleep(1000); await page.keyboard.up('w');
+    await page.keyboard.down('w'); await sleep(2000); await page.keyboard.up('w');
     const s1 = await page.evaluate(() => window.__clr.S.view.walkState());
     assert.ok(Math.hypot(s1.x - s0.x, s1.y - s0.y) > 50, 'W 行唔郁');
     await page.keyboard.down('ArrowLeft'); await sleep(500); await page.keyboard.up('ArrowLeft');

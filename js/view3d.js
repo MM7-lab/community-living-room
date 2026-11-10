@@ -593,6 +593,8 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     // 測試用：即刻畫一格，等測試可以讀到畫面。
     renderNow() { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/png'); },
     setYaw(y) { W.yaw = y; W.pitch = 0; placeCam(); },
+    // 測試用：平面圖一點（cm）喺畫面上嘅位置（px，相對 3D 畫面）。
+    screenOf(x, y, h = 0) { const v = new T.Vector3(x, h, y).project(camera), c = renderer.domElement; return { x: (v.x + 1) / 2 * c.clientWidth, y: (1 - v.y) / 2 * c.clientHeight }; },
     cameraState: () => ({ x: camera.position.x, y: camera.position.y, z: camera.position.z }),
     pinState: () => pins.map(p => ({ id: p.f.id, hidden: p.el.hidden, compact: p.el.classList.contains('compact') })),
     collision: col,

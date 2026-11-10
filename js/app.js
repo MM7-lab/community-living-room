@@ -42,11 +42,11 @@ function renderShell() {
   document.title = `${center.name}｜${center.subtitle || '3D 導覽地圖'}`;
   const dr = $('#draft');
   dr.hidden = !draft;
-  dr.textContent = '試行版：部分資料仲整緊，會陸續補上。';
+  dr.textContent = S.data.tentative ? '試行版：設施位置同開放時間仲整緊，會陸續補上。' : '試行版：部分資料仲整緊，會陸續補上。';
 
   $('#flist').innerHTML = facilities.map(f => `<li><button type="button" class="frow" data-fid="${esc(f.id)}" style="--c:${f.color}">
       <span class="frow-n">${f.no}</span><span class="frow-i" aria-hidden="true">${esc(f.icon)}</span>
-      <span class="frow-main"><span class="frow-name">${esc(f.name)}${f.staffOnly ? ' <span class="tag">職員專用</span>' : ''}</span>
+      <span class="frow-main"><span class="frow-name">${esc(f.name)}${f.staffOnly ? ' <span class="tag">職員專用</span>' : ''}${f.tentative ? ' <span class="tag soft">位置暫定</span>' : ''}</span>
       <span class="frow-sum">${esc(f.summary || '簡介稍後補上')}</span>
       <span class="frow-hours">🕒 ${esc(f.hours || f.booking || '開放時間稍後補上')}</span></span>
       <span class="frow-go" aria-hidden="true">›</span></button></li>`).join('');
@@ -87,7 +87,7 @@ function openCard(fid) {
     : `<div class="ph-empty"><span aria-hidden="true">${esc(f.icon)}</span><small>相片稍後補上</small></div>`;
   const img = ph.querySelector('img');
   if (img) img.addEventListener('error', () => { ph.innerHTML = `<div class="ph-empty"><span aria-hidden="true">${esc(f.icon)}</span><small>相片暫時睇唔到</small></div>`; }, { once: true });
-  $('#card-kicker').innerHTML = `<span class="num" style="--c:${f.color}">${f.no}</span>設施 ${f.no} / ${S.data.facilities.length}${f.staffOnly ? '<span class="tag">職員專用</span>' : ''}`;
+  $('#card-kicker').innerHTML = `<span class="num" style="--c:${f.color}">${f.no}</span>設施 ${f.no} / ${S.data.facilities.length}${f.staffOnly ? '<span class="tag">職員專用</span>' : ''}${f.tentative ? '<span class="tag soft">位置暫定</span>' : ''}`;
   $('#card-title').innerHTML = `<span aria-hidden="true">${esc(f.icon)}</span> ${esc(f.name)}`;
   $('#card-summary').textContent = f.summary || '簡介稍後補上。';
   $('#card-summary').classList.toggle('pending', !f.summary);

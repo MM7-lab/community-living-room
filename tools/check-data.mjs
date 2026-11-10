@@ -44,6 +44,7 @@ if (rawCenter && plan) {
   if (!failed) {
     console.log(`✅ 資料檔冇問題：${plan.rooms.length} 個房間、${plan.walls.length} 幅牆、${plan.items.length} 件傢俬、${d.facilities.length} 個設施。`);
     if (d.pending) console.log(`ℹ️  仲有 ${d.pending} 個設施未填簡介或者開放時間／預約方法，網頁會顯示「試行版」橫額。`);
+    if (d.tentative) console.log(`ℹ️  仲有 ${d.tentative} 個設施位置暫定（tentative），確認位置之後請刪除 "tentative": true。`);
   }
 }
 process.exit(failed ? 1 : 0);
