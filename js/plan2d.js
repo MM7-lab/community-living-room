@@ -5,7 +5,8 @@ const r2 = n => Math.round(n * 10) / 10;
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // 傢俬符號（同辦公室工具一樣：w 沿 x，h = 深度沿 y，正面向 +y）。
-function symbol(sym, w, h) {
+const BRIGHT = ['#D9573F', '#5B8FC9', '#79B86F', '#F2C14E', '#EE9FB0', '#9C83C9', '#E59A62', '#3E9C8F'];
+function symbol(sym, w, h, type = '') {
   const X = -w / 2, Y = -h / 2;
   const rect = (x, y, ww, hh, cls = 'f-body', rx = 0) => `<rect class="${cls}" x="${r2(x)}" y="${r2(y)}" width="${r2(ww)}" height="${r2(hh)}"${rx ? ` rx="${r2(rx)}"` : ''}/>`;
   const line = (x1, y1, x2, y2, cls = 'f-line') => `<line class="${cls}" x1="${r2(x1)}" y1="${r2(y1)}" x2="${r2(x2)}" y2="${r2(y2)}"/>`;
@@ -27,6 +28,22 @@ function symbol(sym, w, h) {
     case 'door2': { const r = w / 2; return line(X, Y + h, X, Y + h - r, 'f-leaf') + line(X + w, Y + h, X + w, Y + h - r, 'f-leaf') + `<path class="f-swing" d="M ${r2(X)} ${r2(Y + h - r)} A ${r2(r)} ${r2(r)} 0 0 1 0 ${r2(Y + h)} M ${r2(X + w)} ${r2(Y + h - r)} A ${r2(r)} ${r2(r)} 0 0 0 0 ${r2(Y + h)}"/>`; }
     case 'column': return rect(X, Y, w, h, 'f-col');
     case 'window': return rect(X, -5, w, 10, 'f-win') + line(X, 0, X + w, 0, 'f-winline');
+    // 設施傢俬
+    case 'coffeebar': return rect(X, Y, w, h, 'f-wood', 3) + rect(X + 14, Y + 4, 48, 38, 'f-red', 4) + `<circle class="f-dark" cx="${r2(X + 86)}" cy="${r2(Y + 20)}" r="10"/>` + [0, 1, 2, 3].map(i => `<circle class="f-white" cx="${r2(X + w - 50 + i * 10)}" cy="${r2(Y + h - 14)}" r="3.5"/>`).join('');
+    case 'stool': return `<circle class="${type === 'kids_stool' ? 'f-kid' : 'f-chair'}" cx="0" cy="0" r="${r2(w / 2)}"/>`;
+    case 'kitchen': return rect(X, Y, w, h, 'f-white', 3) + rect(-w / 4 - 22, -17, 45, 35, 'f-line', 4) + `<circle class="f-line" cx="${r2(w / 4 - 12)}" cy="0" r="10"/><circle class="f-line" cx="${r2(w / 4 + 14)}" cy="0" r="10"/>`;
+    case 'fridge': return rect(X, Y, w, h, 'f-white', 3) + line(X + 4, Y + h - 6, X + w - 4, Y + h - 6);
+    case 'sofa': return rect(X, Y, w, h, 'f-sofa', 10) + rect(X + 12, Y + 18, w - 24, h - 22, 'f-cushion', 6);
+    case 'table': return rect(X, Y, w, h, type === 'kids_table' ? 'f-kid' : type === 'folding_table' ? 'f-body' : 'f-wood', 4);
+    case 'roundtable': return `<circle class="f-wood" cx="0" cy="0" r="${r2(w / 2)}"/>`;
+    case 'massage': return rect(X + 4, Y, w - 8, h, 'f-leather', 18) + rect(X + 16, Y + 6, w - 32, 20, 'f-cushion', 8) + rect(X + 14, Y + 34, w - 28, h - 70, 'f-cushion', 8);
+    case 'treadmill': return rect(X, Y, w, h, 'f-dark', 6) + rect(X + 8, Y + 30, w - 16, h - 40, 'f-belt', 3);
+    case 'bike': return rect(-6, Y, 12, h, 'f-dark', 3) + `<circle class="f-white" cx="0" cy="${r2(Y + 28)}" r="16"/>` + rect(X, Y + 10, w, 6, 'f-dark', 3) + rect(-11, Y + h - 45, 22, 30, 'f-dark', 6);
+    case 'mat': return rect(X, Y, w, h, 'f-mat', 6);
+    case 'bookshelf': return rect(X, Y, w, h, 'f-wood', 2) + Array.from({ length: Math.floor((w - 8) / 7) }, (_, i) => `<rect x="${r2(X + 4 + i * 7)}" y="${r2(Y + h * 0.3)}" width="5.5" height="${r2(h * 0.6)}" style="fill:${BRIGHT[(i * 5 + 3) % BRIGHT.length]}"/>`).join('');
+    case 'playmat': { const cols = ['#F2C14E', '#7FB8E0', '#F08A7E', '#8FCB8A', '#C9A3E0', '#F6B26B']; let s = ''; for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) s += `<rect x="${r2(X + w / 4 * i)}" y="${r2(Y + h / 3 * j)}" width="${r2(w / 4)}" height="${r2(h / 3)}" style="fill:${cols[(i + j * 2) % cols.length]};fill-opacity:.75"/>`; return s + rect(X, Y, w, h, 'f-line', 6); }
+    case 'toyshelf': return rect(X, Y, w, h, 'f-white', 2) + [0, 1, 2].map(i => `<rect x="${r2(X + w / 3 * i + 4)}" y="${r2(Y + h - 10)}" width="${r2(w / 3 - 8)}" height="8" style="fill:${BRIGHT[i * 2]}"/>`).join('');
+    case 'laundry': return rect(X, Y, w, h, 'f-white', 4) + `<circle class="f-drum" cx="0" cy="${r2(h * 0.08)}" r="${r2(Math.min(w, h) * 0.3)}"/>`;
     default: return rect(X, Y, w, h);
   }
 }
@@ -40,7 +57,7 @@ function planSvg(plan, facilities, vb) {
   // 先畫傢俬，再畫牆，最後畫門窗。
   const layer = it => (it.type === 'door' || it.type === 'door2' || it.type === 'window' || it.type === 'column') ? 2 : 1;
   const items = plan.items.slice().sort((a, b) => layer(a) - layer(b));
-  const furn = it => `<g transform="translate(${r2(it.x)} ${r2(it.y)}) rotate(${it.r || 0})">${symbol(CATALOG[it.type].sym, it.w, it.h)}</g>`;
+  const furn = it => `<g transform="translate(${r2(it.x)} ${r2(it.y)}) rotate(${it.r || 0})">${symbol(CATALOG[it.type].sym, it.w, it.h, it.type)}</g>`;
   items.filter(it => layer(it) === 1).forEach(it => { h += furn(it); });
   const opens = openingsOf(plan);
   baseSegments(plan).forEach(sg => {

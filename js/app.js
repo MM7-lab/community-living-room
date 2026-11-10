@@ -1,5 +1,5 @@
 // 社區客廳 3D 導覽地圖：載入資料、切換功能、資料卡。
-import { normalizePlan, normalizeCenter, DataError } from './plan-model.js';
+import { normalizePlan, normalizeCenter, withFurniture, DataError } from './plan-model.js';
 import { createPlan2D, esc } from './plan2d.js';
 import { loadThree, hasWebGL, createView3D } from './view3d.js';
 
@@ -283,6 +283,7 @@ async function boot() {
     S.data = normalizeCenter(c, S.plan);
     if (S.data.errors.length) throw new DataError('設施資料檔（data/center.json）有以下問題：', S.data.errors);
     S.data.warnings.forEach(w => console.warn(w));
+    S.plan = withFurniture(S.plan, S.data.facilities);
   } catch (e) { showFatal(e); return; }
   debug.data = S.data; debug.plan = S.plan;
   renderShell();

@@ -4,7 +4,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { normalizePlan, normalizeCenter, DataError } from '../js/plan-model.js';
+import { normalizePlan, normalizeCenter, withFurniture, furnitureProblems, DataError } from '../js/plan-model.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 let failed = false;
@@ -38,11 +38,13 @@ if (rawCenter && plan) {
   const d = normalizeCenter(rawCenter, plan);
   d.errors.forEach(fail);
   d.warnings.forEach(warn);
+  furnitureProblems(plan, d.facilities).forEach(warn);
   d.facilities.forEach(f => {
     if (f.photo && !/^https:\/\//.test(f.photo) && !existsSync(join(ROOT, f.photo))) fail(`設施「${f.name}」嘅相片 ${f.photo} 搵唔到，請檢查檔名（大細楷都要一樣）。`);
   });
   if (!failed) {
-    console.log(`✅ 資料檔冇問題：${plan.rooms.length} 個房間、${plan.walls.length} 幅牆、${plan.items.length} 件傢俬、${d.facilities.length} 個設施。`);
+    const extra = withFurniture(plan, d.facilities).items.length - plan.items.length;
+    console.log(`✅ 資料檔冇問題：${plan.rooms.length} 個房間、${plan.walls.length} 幅牆、${plan.items.length} 件原有傢俬、${d.facilities.length} 個設施（連 ${extra} 件設施傢俬）。`);
     if (d.pending) console.log(`ℹ️  仲有 ${d.pending} 個設施未填簡介或者開放時間／預約方法，網頁會顯示「試行版」橫額。`);
     if (d.tentative) console.log(`ℹ️  仲有 ${d.tentative} 個設施位置暫定（tentative），確認位置之後請刪除 "tentative": true。`);
   }

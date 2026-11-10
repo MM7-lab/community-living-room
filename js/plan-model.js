@@ -39,7 +39,28 @@ export const CATALOG = {
   column: { w: 40, d: 40, ht: 0, sym: 'column' },
   plant: { w: 50, d: 50, ht: 0, sym: 'plant' },
   window: { w: 120, d: 10, ht: 0, sym: 'window' },
+  // 社區客廳設施傢俬（寫喺 center.json 各設施嘅 furniture；尺寸係常見款式嘅大約數，可以逐件改 w／d／ht）
+  coffee_bar: { w: 160, d: 60, ht: 95, sym: 'coffeebar', name: '咖啡吧枱（連咖啡機）' },
+  bar_stool: { w: 40, d: 40, ht: 75, sym: 'stool', name: '高腳凳' },
+  kitchen_counter: { w: 150, d: 60, ht: 90, sym: 'kitchen', name: '廚房工作枱（連盆同電磁爐）' },
+  fridge: { w: 60, d: 65, ht: 175, sym: 'fridge', name: '雪櫃' },
+  sofa: { w: 200, d: 85, ht: 85, sym: 'sofa', name: '梳化' },
+  coffee_table: { w: 100, d: 50, ht: 42, sym: 'table', name: '茶几' },
+  tv_cabinet: { w: 160, d: 40, ht: 50, sym: 'cabinet', name: '電視櫃' },
+  massage_chair: { w: 80, d: 130, ht: 115, sym: 'massage', name: '按摩椅' },
+  treadmill: { w: 80, d: 180, ht: 140, sym: 'treadmill', name: '跑步機' },
+  exercise_bike: { w: 55, d: 100, ht: 120, sym: 'bike', name: '健身單車' },
+  gym_mat: { w: 180, d: 60, ht: 2, sym: 'mat', name: '運動墊' },
+  bookshelf: { w: 90, d: 35, ht: 180, sym: 'bookshelf', name: '書櫃' },
+  reading_table: { w: 90, d: 90, ht: 75, sym: 'roundtable', name: '圓形閱讀枱' },
+  play_mat: { w: 220, d: 170, ht: 3, sym: 'playmat', name: '兒童遊戲地墊（連玩具）' },
+  toy_shelf: { w: 120, d: 35, ht: 75, sym: 'toyshelf', name: '玩具櫃' },
+  kids_table: { w: 80, d: 60, ht: 50, sym: 'table', name: '兒童枱' },
+  kids_stool: { w: 30, d: 30, ht: 30, sym: 'stool', name: '兒童凳' },
+  laundry_tower: { w: 60, d: 65, ht: 172, sym: 'laundry', name: '洗衣機＋乾衣機（上下疊）' },
+  folding_table: { w: 120, d: 60, ht: 80, sym: 'table', name: '摺衫枱' },
 };
+export const FURNITURE_TYPES = Object.keys(CATALOG).filter(k => CATALOG[k].name);
 const OPENING_TYPES = new Set(['door', 'door2', 'window']);
 
 export class DataError extends Error {
@@ -304,6 +325,19 @@ export function normalizeCenter(raw, plan) {
       staffOnly: f.staffOnly === true, tentative: f.tentative === true, at: at || { x: 0, y: 0 }, area, radius: isNum(f.radius) ? +f.radius : 150, view, color,
     });
     if (f.photo && !safeUrl(f.photo)) errors.push(`${label}嘅相片路徑（photo）唔安全或者唔正確，請用 photos/xxx.jpg。`);
+    // 設施傢俬：dx／dy 係相對設施位置（at）嘅距離（cm），設施搬位傢俬會跟住搬。
+    const fac = facilities[facilities.length - 1];
+    fac.furniture = [];
+    if (f.furniture != null && !Array.isArray(f.furniture)) errors.push(`${label}嘅傢俬（furniture）要係一個清單 [ ... ]。`);
+    (Array.isArray(f.furniture) ? f.furniture : []).forEach((it, j) => {
+      const c = CATALOG[it?.type];
+      if (!c || OPENING_TYPES.has(it.type)) { errors.push(`${label}第 ${j + 1} 件傢俬類型「${str(it?.type, 30)}」唔認識。可以用：${FURNITURE_TYPES.join('、')}。`); return; }
+      if (!isNum(it.dx) || !isNum(it.dy)) { errors.push(`${label}第 ${j + 1} 件傢俬（${it.type}）要有 dx 同 dy（相對設施位置，cm）。`); return; }
+      fac.furniture.push({
+        id: `${id}~${j + 1}`, type: it.type, fid: id, x: fac.at.x + +it.dx, y: fac.at.y + +it.dy, r: isNum(it.r) ? +it.r : 0,
+        w: isNum(it.w) && +it.w > 0 ? +it.w : c.w, h: isNum(it.d) && +it.d > 0 ? +it.d : c.d, ht: isNum(it.ht) ? Math.max(0, +it.ht) : c.ht,
+      });
+    });
   });
   const s = raw.start || {};
   const start = { at: xy(s.at), lookAt: xy(s.lookAt) };
@@ -311,6 +345,42 @@ export function normalizeCenter(raw, plan) {
   const pending = facilities.filter(f => !f.summary || !(f.hours || f.booking)).length;
   const tentative = facilities.filter(f => f.tentative).length;
   return { center, facilities, start, updated: str(raw.updated, 20), draft: raw.draft === true || pending > 0 || tentative > 0, pending, tentative, errors, warnings };
+}
+
+// 將設施傢俬加入平面圖：之後 3D、2D、小地圖同碰撞都會用到。
+export function withFurniture(plan, facilities) {
+  const extra = facilities.flatMap(f => f.furniture || []);
+  if (!extra.length) return plan;
+  const items = plan.items.concat(extra);
+  return { ...plan, items, byId: Object.fromEntries(items.map(i => [i.id, i])) };
+}
+
+// 檢查設施傢俬：出咗平面圖、撞牆、撞到其他傢俬或者擋住門。回傳中文提示。
+export function furnitureProblems(plan, facilities) {
+  const out = [], segs = baseSegments(plan);
+  const distSeg = (p, a, b) => { const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2)); return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy); };
+  const axes = it => { const a = rad(it.r || 0); return [[Math.cos(a), Math.sin(a)], [-Math.sin(a), Math.cos(a)]]; };
+  const hit = (A, B) => { const ca = corners(A), cb = corners(B); for (const ax of [...axes(A), ...axes(B)]) { const pa = ca.map(c => c.x * ax[0] + c.y * ax[1]), pb = cb.map(c => c.x * ax[0] + c.y * ax[1]); if (Math.max(...pa) + 1 <= Math.min(...pb) || Math.max(...pb) + 1 <= Math.min(...pa)) return false; } return true; };
+  const flat = it => heightOf(it) < 10;
+  const mine = facilities.flatMap(f => (f.furniture || []).map(it => ({ it, f })));
+  mine.forEach(({ it, f }, k) => {
+    const label = `「${f.name}」嘅 ${CATALOG[it.type].name || it.type}`;
+    let wall = false, outside = false;
+    for (let i = 0; i <= 6 && !wall && !outside; i++) for (let j = 0; j <= 6; j++) {
+      const p = toWorldFrom(it, -it.w / 2 + it.w * i / 6, -it.h / 2 + it.h * j / 6);
+      if (!insideBuilding(plan, p)) { outside = true; break; }
+      if (segs.some(s => distSeg(p, s.a, s.b) < s.t / 2 + 1)) { wall = true; break; }
+    }
+    if (outside) out.push(`${label}出咗平面圖外框。`);
+    else if (wall) out.push(`${label}撞到牆。`);
+    plan.items.forEach(o => {
+      if (o.type === 'window' || o.type === 'tv') return;
+      const isDoor = o.type === 'door' || o.type === 'door2';
+      if ((isDoor || o.type === 'column' || (!flat(it) && !flat(o))) && hit(it, o)) out.push(`${label}${isDoor ? '擋住咗門口' : '撞到原有傢俬'}。`);
+    });
+    mine.slice(k + 1).forEach(({ it: o, f: g }) => { if (!(flat(it) && flat(o)) && hit(it, o)) out.push(`${label}同「${g.name}」嘅 ${CATALOG[o.type].name || o.type} 疊埋。`); });
+  });
+  return [...new Set(out)];
 }
 
 // 設施嘅導覽時間：按字數計，長者睇字慢啲，所以寬鬆啲。

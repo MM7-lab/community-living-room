@@ -35,8 +35,14 @@ const MAT_SPEC = {
   wood: [0xD4A570], top: [0xEBD3AE], steel: [0xB8AC9F], dark: [0x5E514A], chair: [0xE48F5C], fabric: [0xBFD7C0],
   door: [0xC98B57], column: [0xF1E7D8], card: [0xC9995F], screen: [0x2D2826], plant: [0x6FAF73], pot: [0xB78C6C],
   machine: [0xF6F1EA], light: [0xF7F0E5], ground: [0xF2E6D3],
+  // 設施傢俬用色
+  chrome: [0xC9CED2], red: [0xD9573F], blue: [0x5B8FC9], green: [0x79B86F], yellow: [0xF2C14E], pink: [0xEE9FB0],
+  white: [0xFBFAF7], sofa: [0xE59A62], cushion: [0xF4D3A8], leather: [0x7D5440], rubber: [0x6E9E96], black: [0x35302C], glassdark: [0x6F93AD],
 };
-const WOOD = new Set(['window1', 'window2', 'cube3', 'sqcab', 'rectcab', 'bigrect', 'incentive']);
+const WOOD = new Set(['window1', 'window2', 'cube3', 'sqcab', 'rectcab', 'bigrect', 'incentive', 'tv_cabinet']);
+// 書本、地磚、玩具用嘅顏色（暖色為主）
+const BRIGHT = ['#D9573F', '#5B8FC9', '#79B86F', '#F2C14E', '#EE9FB0', '#9C83C9', '#E59A62', '#3E9C8F', '#F6EEDF'];
+const seeded = seed => { let s = 0; for (const ch of String(seed)) s = (s * 31 + ch.charCodeAt(0)) % 233280; return () => (s = (s * 9301 + 49297) % 233280) / 233280; };
 const PIN_Y = 150;
 const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -76,7 +82,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     if (key === 'ceiling') return (M.ceiling = new T.MeshStandardMaterial({ color: 0xFFF8EE, emissive: 0x6E6458, roughness: 1, side: T.DoubleSide }));
     const s = MAT_SPEC[key] || [0xcccccc];
     return (M[key] = new T.MeshStandardMaterial({
-      color: s[0], roughness: 0.88, metalness: key === 'steel' ? 0.25 : 0,
+      color: s[0], roughness: key === 'chrome' ? 0.35 : 0.88, metalness: key === 'chrome' ? 0.55 : key === 'steel' ? 0.25 : 0,
       transparent: s[1] !== undefined, opacity: s[1] ?? 1,
       side: key === 'floor' || key === 'ceiling' || key === 'ground' ? T.DoubleSide : T.FrontSide,
     }));
@@ -87,6 +93,47 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     parent.add(mesh);
     if (edges) { const e = new T.LineSegments(new T.EdgesGeometry(g), mat('edge')); e.position.copy(mesh.position); e.userData.noPick = true; parent.add(e); }
     return mesh;
+  }
+  function cyl3(parent, rTop, rBot, h, x, y, z, m, seg = 20) {
+    const mesh = new T.Mesh(new T.CylinderGeometry(rTop, rBot, h, seg), mat(m));
+    mesh.position.set(x, y + h / 2, z); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh);
+    return mesh;
+  }
+  // 好多細件（書、地磚、玩具）合併做一件，手機畫得快啲。
+  function colorBlocks(parent, blocks) {
+    if (!blocks.length) return null;
+    const pos = [], nor = [], colr = [], c = new T.Color(), m4 = new T.Matrix4();
+    blocks.forEach(bk => {
+      const geo = new T.BoxGeometry(bk.w, bk.h, bk.d).toNonIndexed();
+      geo.applyMatrix4(m4.makeTranslation(bk.x, bk.y + bk.h / 2, bk.z));
+      const p = geo.attributes.position.array, n = geo.attributes.normal.array;
+      for (let i = 0; i < p.length; i++) { pos.push(p[i]); nor.push(n[i]); }
+      c.set(bk.color); for (let i = 0; i < geo.attributes.position.count; i++) colr.push(c.r, c.g, c.b);
+      geo.dispose();
+    });
+    const geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
+    geo.setAttribute('color', new T.Float32BufferAttribute(colr, 3));
+    const mesh = new T.Mesh(geo, M.vcol || (M.vcol = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 })));
+    mesh.receiveShadow = true; parent.add(mesh);
+    return mesh;
+  }
+  // 一層層書：由左至右排，高矮厚薄唔同。
+  function books(rnd, w, d, levels, fill = 0.85) {
+    const out = [];
+    levels.forEach(lv => {
+      let x = -w / 2 + 3;
+      const end = -w / 2 + 3 + (w - 6) * fill;
+      while (x < end) {
+        const bw = 2.5 + rnd() * 3.5, bh = lv.h * (0.62 + rnd() * 0.3);
+        if (x + bw > end) break;
+        out.push({ w: bw - 0.4, h: bh, d: d * (0.7 + rnd() * 0.15), x: x + bw / 2, y: lv.y, z: d * 0.06, color: BRIGHT[Math.floor(rnd() * BRIGHT.length)] });
+        x += bw;
+        if (rnd() < 0.08) x += 4 + rnd() * 6; // 間中留個空位
+      }
+    });
+    return out;
   }
   const itemMat = it => it.type.startsWith('rack') ? 'steel' : WOOD.has(it.type) ? 'wood' : it.type === 'supplybox' ? 'card'
     : it.type === 'printer' ? 'dark' : (it.type === 'microwave' || it.type === 'oven') ? 'machine' : 'light';
@@ -116,6 +163,139 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
         box3(g, 3, H, d, -w / 2 + 1.5, 0, 0, 'steel', false); box3(g, 3, H, d, w / 2 - 1.5, 0, 0, 'steel', false);
         const n = Math.max(3, Math.round(H / 40));
         for (let i = 0; i <= n; i++) box3(g, w, 2, d, 0, Math.min(H - 2, i * H / n), 0, 'steel', i === n);
+        // 左牆層架當係圖書閣嘅書架：每層放書
+        colorBlocks(g, books(seeded(it.id), w, d, Array.from({ length: n }, (_, i) => ({ y: i * H / n + 2, h: H / n - 6 })), 0.8));
+        break;
+      }
+      case 'bookshelf': {
+        box3(g, 3, H, d, -w / 2 + 1.5, 0, 0, 'wood'); box3(g, 3, H, d, w / 2 - 1.5, 0, 0, 'wood');
+        box3(g, w, H, 2, 0, 0, -d / 2 + 1, 'wood', false);
+        const n = 5;
+        for (let i = 0; i <= n; i++) box3(g, w - 6, 2.5, d - 2, 0, Math.min(H - 2.5, i * H / n), 1, 'wood', false);
+        colorBlocks(g, books(seeded(it.id), w, d, Array.from({ length: n }, (_, i) => ({ y: i * H / n + 2.5, h: H / n - 6 })), 0.9));
+        break;
+      }
+      case 'coffeebar': {
+        box3(g, w, H - 4, d - 6, 0, 0, -3, 'wood');
+        box3(g, w + 4, 4, d + 4, 0, H - 4, 0, 'top');
+        const mx = -w / 2 + 38;
+        box3(g, 48, 40, 38, mx, H, -d / 2 + 22, 'red');                 // 咖啡機
+        box3(g, 40, 4, 6, mx, H + 30, -d / 2 + 43, 'chrome', false);
+        cyl3(g, 3.5, 3.5, 10, mx - 8, H + 14, -d / 2 + 44, 'chrome', 10); // 沖煮頭
+        cyl3(g, 3.5, 3.5, 10, mx + 8, H + 14, -d / 2 + 44, 'chrome', 10);
+        cyl3(g, 9, 11, 30, mx + 48, H, -d / 2 + 20, 'black');           // 磨豆機
+        cyl3(g, 10, 5, 12, mx + 48, H + 30, -d / 2 + 20, 'glassdark');
+        for (let i = 0; i < 4; i++) cyl3(g, 3.5, 3, 7, w / 2 - 50 + i * 10, H, d / 2 - 14, 'white', 12); // 咖啡杯
+        break;
+      }
+      case 'stool': {
+        const kid = it.type === 'kids_stool';
+        if (kid) cyl3(g, w / 2, w / 2 * 0.85, H, 0, 0, 0, ['yellow', 'blue', 'green', 'pink', 'red'][Math.floor(seeded(it.id)() * 5)]);
+        else {
+          cyl3(g, w / 2 * 0.75, w / 2 * 0.8, 3, 0, 0, 0, 'chrome');
+          cyl3(g, 2.5, 2.5, H - 6, 0, 3, 0, 'chrome', 10);
+          cyl3(g, w / 2 * 0.6, w / 2 * 0.6, 2, 0, H * 0.35, 0, 'chrome');  // 腳踏
+          cyl3(g, w / 2, w / 2, 6, 0, H - 6, 0, 'chair');
+        }
+        break;
+      }
+      case 'kitchen': {
+        box3(g, w, H - 4, d - 4, 0, 0, -2, 'white');
+        box3(g, w + 2, 4, d + 2, 0, H - 4, 0, 'top');
+        box3(g, 45, 2, 35, -w / 4, H - 1, 0, 'chrome', false);         // 盆
+        box3(g, 55, 1.5, 45, w / 4, H, 0, 'black', false);              // 電磁爐
+        break;
+      }
+      case 'fridge': {
+        box3(g, w, H, d, 0, 0, 0, 'white');
+        box3(g, w + 0.5, 1.5, 1, 0, H * 0.66, d / 2, 'steel', false);
+        box3(g, 3, 45, 4, w / 2 - 8, H * 0.25, d / 2 + 2, 'chrome', false);
+        box3(g, 3, 28, 4, w / 2 - 8, H * 0.72, d / 2 + 2, 'chrome', false);
+        break;
+      }
+      case 'sofa': {
+        box3(g, w, 40, d, 0, 0, 0, 'sofa');
+        const n = w > 150 ? 3 : 2, cw = (w - 24) / n;
+        for (let i = 0; i < n; i++) box3(g, cw - 2, 12, d - 24, -w / 2 + 12 + cw * (i + 0.5), 40, 8, 'cushion');
+        box3(g, w, 45, 20, 0, 40, -d / 2 + 10, 'sofa');
+        box3(g, 12, 22, d, -w / 2 + 6, 40, 0, 'sofa'); box3(g, 12, 22, d, w / 2 - 6, 40, 0, 'sofa');
+        box3(g, 30, 28, 10, -w / 2 + 34, 52, -d / 2 + 26, 'yellow');   // 咕𠱸
+        box3(g, 30, 28, 10, w / 2 - 34, 52, -d / 2 + 26, 'blue');
+        break;
+      }
+      case 'table': {
+        const top = it.type === 'kids_table' ? 'yellow' : it.type === 'folding_table' ? 'light' : 'wood';
+        const leg = it.type === 'kids_table' ? 'blue' : it.type === 'folding_table' ? 'steel' : 'wood';
+        box3(g, w, 4, d, 0, H - 4, 0, top);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) box3(g, 4, H - 4, 4, sx * (w / 2 - 6), 0, sz * (d / 2 - 6), leg, false);
+        break;
+      }
+      case 'roundtable':
+        cyl3(g, w / 2, w / 2, 4, 0, H - 4, 0, 'wood', 32);
+        cyl3(g, 4, 4, H - 4, 0, 0, 0, 'steel', 12);
+        cyl3(g, w / 4, w / 4, 3, 0, 0, 0, 'steel', 24);
+        break;
+      case 'massage': {
+        box3(g, w - 10, 22, d - 30, 0, 0, -6, 'black');                      // 底座
+        box3(g, 14, 38, 80, -w / 2 + 7, 22, -8, 'leather'); box3(g, 14, 38, 80, w / 2 - 7, 22, -8, 'leather'); // 扶手
+        box3(g, w - 28, 16, 55, 0, 28, 0, 'cushion');                        // 座墊
+        const back = box3(g, w - 22, 80, 20, 0, 34, -d / 2 + 26, 'leather', false); back.rotation.x = -0.32;
+        const head = box3(g, w - 34, 20, 16, 0, 108, -d / 2 + 6, 'cushion', false); head.rotation.x = -0.32;
+        const legs = box3(g, w - 30, 12, 42, 0, 14, d / 2 - 20, 'leather', false); legs.rotation.x = 0.45; // 腳托
+        break;
+      }
+      case 'treadmill': {
+        box3(g, w, 14, d, 0, 0, 0, 'dark');
+        box3(g, w - 16, 2, d - 34, 0, 14, 10, 'black', false);              // 跑帶
+        for (const sx of [-1, 1]) {
+          box3(g, 6, 110, 8, sx * (w / 2 - 5), 14, -d / 2 + 14, 'steel');   // 企柱
+          box3(g, 4, 4, 55, sx * (w / 2 - 5), 100, -d / 2 + 40, 'chrome', false); // 扶手
+        }
+        box3(g, w, 12, 26, 0, 118, -d / 2 + 14, 'dark');                    // 控制台
+        box3(g, 32, 8, 2, 0, 120, -d / 2 + 28, 'glassdark', false);
+        break;
+      }
+      case 'bike': {
+        box3(g, 10, 8, d, 0, 0, 0, 'dark');
+        box3(g, w, 6, 10, 0, 0, -d / 2 + 5, 'dark'); box3(g, w, 6, 10, 0, 0, d / 2 - 5, 'dark');
+        const fly = cyl3(g, 22, 22, 6, 0, 8, -d / 2 + 30, 'chrome', 28); fly.rotation.z = Math.PI / 2; fly.position.y = 32;
+        box3(g, 6, 72, 6, 0, 8, d / 2 - 30, 'steel');
+        box3(g, 22, 6, 30, 0, 80, d / 2 - 30, 'black');                     // 座位
+        box3(g, 6, 95, 6, 0, 8, -d / 2 + 16, 'steel');
+        box3(g, 46, 5, 6, 0, 100, -d / 2 + 14, 'black');                    // 手把
+        box3(g, 18, 12, 6, 0, 104, -d / 2 + 10, 'glassdark', false);
+        break;
+      }
+      case 'mat': box3(g, w, Math.max(H, 1.5), d, 0, 0, 0, 'rubber', false); break;
+      case 'playmat': {
+        const nx = 4, nz = 3, tw = w / nx, td = d / nz, cols = ['#F2C14E', '#7FB8E0', '#F08A7E', '#8FCB8A', '#C9A3E0', '#F6B26B'];
+        const tiles = [];
+        for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) tiles.push({ w: tw - 0.6, h: Math.max(H, 2), d: td - 0.6, x: -w / 2 + tw * (i + 0.5), y: 0, z: -d / 2 + td * (j + 0.5), color: cols[(i + j * 2) % cols.length] });
+        // 積木
+        const rnd = seeded(it.id);
+        [[-w / 2 + 30, -d / 2 + 30], [-w / 2 + 48, -d / 2 + 34], [-w / 2 + 38, -d / 2 + 50]].forEach(([x, z], k) => tiles.push({ w: 15, h: 15, d: 15, x, y: H, z, color: BRIGHT[Math.floor(rnd() * 6)] }));
+        tiles.push({ w: 15, h: 15, d: 15, x: -w / 2 + 38, y: H + 15, z: -d / 2 + 38, color: '#F2C14E' });
+        colorBlocks(g, tiles);
+        const ball = new T.Mesh(new T.SphereGeometry(12, 20, 14), mat('red')); ball.position.set(w / 2 - 40, H + 12, d / 2 - 35); ball.castShadow = true; g.add(ball);
+        const body = new T.Mesh(new T.SphereGeometry(11, 16, 12), mat('card')); body.position.set(w / 4, H + 11, -d / 4); body.castShadow = true; g.add(body);
+        const headM = new T.Mesh(new T.SphereGeometry(8, 16, 12), mat('card')); headM.position.set(w / 4, H + 27, -d / 4); headM.castShadow = true; g.add(headM);
+        break;
+      }
+      case 'toyshelf': {
+        box3(g, w, H, d, 0, 0, 0, 'white');
+        const bins = [], rnd = seeded(it.id);
+        for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) bins.push({ w: w / 3 - 8, h: H / 2 - 10, d: 6, x: -w / 2 + w / 3 * (i + 0.5), y: 5 + j * H / 2, z: d / 2 + 1, color: BRIGHT[Math.floor(rnd() * 6)] });
+        colorBlocks(g, bins);
+        break;
+      }
+      case 'laundry': {
+        const u = H / 2;
+        for (let k = 0; k < 2; k++) {
+          box3(g, w, u - 1, d, 0, k * u, 0, 'white');
+          box3(g, w - 6, 8, 2, 0, k * u + u - 14, d / 2 + 1, 'steel', false);          // 控制板
+          const ring = cyl3(g, 19, 19, 3, 0, 0, 0, 'chrome', 28); ring.rotation.x = Math.PI / 2; ring.position.set(0, k * u + u * 0.42, d / 2 + 1.5);
+          const glassM = cyl3(g, 14, 14, 3.4, 0, 0, 0, 'glassdark', 28); glassM.rotation.x = Math.PI / 2; glassM.position.set(0, k * u + u * 0.42, d / 2 + 1.8);
+        }
         break;
       }
       case 'tv': box3(g, w, H, Math.max(d, 4), 0, 100, 0, 'screen'); break;

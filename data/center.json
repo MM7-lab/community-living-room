@@ -8,7 +8,7 @@
     "note": "設施資料參考《明愛牛頭角社區中心通訊》。",
     "planNote": "平面圖暫時借用新辦公室平面圖，標咗「位置暫定」嘅設施位置未經確認。尺寸只供參考。"
   },
-  "start": { "at": [647, 175], "lookAt": [751, 289] },
+  "start": {"at": [647, 175], "lookAt": [751, 289]},
   "facilities": [
     {
       "id": "entrance",
@@ -21,7 +21,7 @@
       "tour": "歡迎嚟到賽馬會「聚首壹塘」社區客廳！導覽由入口開始。",
       "at": [669, 154],
       "area": [[464, 100], [575, 0], [752, 182], [645, 286]],
-      "view": { "from": [970, -139], "height": 600 }
+      "view": {"from": [970, -139], "height": 600}
     },
     {
       "id": "coffee",
@@ -32,8 +32,13 @@
       "booking": "",
       "photo": "",
       "tentative": true,
-      "at": [780, 420],
-      "radius": 120
+      "at": [810, 390],
+      "radius": 120,
+      "furniture": [
+        {"type": "coffee_bar", "dx": 36, "dy": -54, "r": 46},
+        {"type": "bar_stool", "dx": -31, "dy": -44, "r": 46},
+        {"type": "bar_stool", "dx": 24, "dy": 13, "r": 46}
+      ]
     },
     {
       "id": "kitchen",
@@ -45,7 +50,10 @@
       "photo": "",
       "tentative": true,
       "at": [909, 604],
-      "area": [[1000, 440], [1080, 520], [900, 680], [900, 730], [710, 730]]
+      "area": [[1000, 440], [1080, 520], [900, 680], [900, 730], [710, 730]],
+      "furniture": [
+        {"type": "fridge", "dx": -34, "dy": 21, "r": 225}
+      ]
     },
     {
       "id": "tv",
@@ -57,7 +65,12 @@
       "photo": "",
       "tentative": true,
       "at": [800, 960],
-      "area": [[630, 730], [900, 730], [900, 1292], [630, 1292]]
+      "area": [[630, 730], [900, 730], [900, 1292], [630, 1292]],
+      "furniture": [
+        {"type": "sofa", "dx": -120, "dy": 35, "r": 270},
+        {"type": "coffee_table", "dx": -38, "dy": 35, "r": 90, "w": 80, "d": 40},
+        {"type": "tv_cabinet", "dx": 70, "dy": 35, "r": 90}
+      ]
     },
     {
       "id": "massage",
@@ -69,7 +82,11 @@
       "photo": "",
       "tentative": true,
       "at": [720, 1180],
-      "radius": 90
+      "radius": 90,
+      "furniture": [
+        {"type": "massage_chair", "dx": -20, "dy": 40, "r": 180},
+        {"type": "massage_chair", "dx": 80, "dy": 40, "r": 180}
+      ]
     },
     {
       "id": "gym",
@@ -80,7 +97,12 @@
       "booking": "",
       "photo": "",
       "tentative": true,
-      "at": [500, 930]
+      "at": [575, 970],
+      "furniture": [
+        {"type": "treadmill", "dx": 5, "dy": -110},
+        {"type": "exercise_bike", "dx": 10, "dy": 70},
+        {"type": "gym_mat", "dx": 15, "dy": 215, "r": 90}
+      ]
     },
     {
       "id": "library",
@@ -91,7 +113,13 @@
       "booking": "",
       "photo": "",
       "tentative": true,
-      "at": [110, 820]
+      "at": [110, 860],
+      "furniture": [
+        {"type": "bookshelf", "dx": 5, "dy": -200},
+        {"type": "reading_table", "dx": 5, "dy": 40},
+        {"type": "chair", "dx": 5, "dy": -35, "r": 180},
+        {"type": "chair", "dx": 5, "dy": 115}
+      ]
     },
     {
       "id": "kids",
@@ -103,7 +131,15 @@
       "photo": "",
       "tentative": true,
       "at": [290, 1430],
-      "area": [[0, 1292], [534, 1292], [534, 1555], [0, 1555]]
+      "area": [[0, 1292], [534, 1292], [534, 1555], [0, 1555]],
+      "furniture": [
+        {"type": "play_mat", "dx": 50, "dy": -40},
+        {"type": "toy_shelf", "dx": -263, "dy": -40, "r": 270},
+        {"type": "kids_table", "dx": -155, "dy": -80},
+        {"type": "kids_stool", "dx": -215, "dy": -80},
+        {"type": "kids_stool", "dx": -95, "dy": -80},
+        {"type": "kids_stool", "dx": -155, "dy": -20}
+      ]
     },
     {
       "id": "laundry",
@@ -115,7 +151,13 @@
       "photo": "",
       "tentative": true,
       "at": [717, 1424],
-      "area": [[534, 1292], [900, 1292], [900, 1555], [534, 1555]]
+      "area": [[534, 1292], [900, 1292], [900, 1555], [534, 1555]],
+      "furniture": [
+        {"type": "laundry_tower", "dx": -137, "dy": 89, "r": 180},
+        {"type": "laundry_tower", "dx": -72, "dy": 89, "r": 180},
+        {"type": "laundry_tower", "dx": -7, "dy": 89, "r": 180},
+        {"type": "folding_table", "dx": 143, "dy": -44, "r": 90}
+      ]
     }
   ]
 }

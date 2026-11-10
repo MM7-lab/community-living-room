@@ -199,6 +199,18 @@ h1, h2, h3, p { margin: 0; }
 .f-leaf { stroke: #C98B57; stroke-width: 3; stroke-linecap: round; }
 .f-win { fill: #E6F4FA; stroke: #7FBAD6; stroke-width: 1.6; }
 .f-winline { stroke: #7FBAD6; stroke-width: 1.2; }
+/* 設施傢俬（2D 平面圖） */
+.f-wood, .f-red, .f-white, .f-kid, .f-sofa, .f-cushion, .f-leather, .f-belt, .f-mat, .f-drum { vector-effect: non-scaling-stroke; }
+.f-wood { fill: #E3BC8C; stroke: #A87A4E; stroke-width: 1.2; }
+.f-red { fill: #D9573F; stroke: #A63F2B; stroke-width: 1; }
+.f-white { fill: #FFFFFF; stroke: #A68D78; stroke-width: 1.2; }
+.f-kid { fill: #F2C14E; stroke: #C99A2A; stroke-width: 1; }
+.f-sofa { fill: #E59A62; stroke: #B8713F; stroke-width: 1.2; }
+.f-cushion { fill: #F4D3A8; stroke: #D3A877; stroke-width: 1; }
+.f-leather { fill: #8E614A; stroke: #5E3E2E; stroke-width: 1.2; }
+.f-belt { fill: #35302C; stroke: none; }
+.f-mat { fill: #8DBDB5; stroke: #5E918A; stroke-width: 1; }
+.f-drum { fill: #CFE2EE; stroke: #6F93AD; stroke-width: 2; }
 
 .ppin {
   position: absolute; transform: translate(-50%, -50%); width: 42px; height: 42px; padding: 0; border-radius: 50%;
