@@ -87,12 +87,12 @@ test('實心牆會遮住設施標記，玻璃牆唔會', () => {
 test('撳平面圖揀設施：點優先，再睇範圍，淨係揀同一層', () => {
   const d = normalizeCenter(center, plans), G = facilitiesOn(d.facilities, 'G'), F1 = facilitiesOn(d.facilities, '1F');
   assert.equal(facilityAt(G, { x: 420, y: 1515 })?.id, 'entrance');
-  assert.equal(facilityAt(G, { x: 495, y: 872 })?.id, 'massage');
+  assert.equal(facilityAt(G, { x: 510, y: 935 })?.id, 'massage');
   assert.equal(facilityAt(G, { x: -300, y: 900 })?.id, 'play');
-  assert.equal(facilityAt(G, { x: 340, y: 1240 })?.id, 'dining');
+  assert.equal(facilityAt(G, { x: 300, y: 1250 })?.id, 'dining');
   assert.equal(facilityAt(G, { x: 30, y: 1000 })?.id, 'living');
   assert.equal(facilityAt(G, { x: 100, y: 860 })?.id, 'tv', '大電視（點）喺休閒區範圍入面，點要優先');
-  assert.equal(facilityAt(G, { x: 520, y: 750 })?.id, 'health', '健康站（點）喺洗衣區範圍入面，點要優先');
+  assert.equal(facilityAt(G, { x: 545, y: 830 })?.id, 'health', '健康站（點）喺洗衣區範圍入面，點要優先');
   assert.equal(facilityAt(G, { x: 150, y: 250 })?.id, 'kitchen', '大電視已經搬去大廳，廚房分享區屬社區廚房');
   assert.equal(facilityAt(G, { x: -300, y: 420 })?.id, 'kitchen');
   assert.equal(facilityAt(G, { x: 480, y: 650 })?.id, 'laundry');
@@ -160,7 +160,7 @@ test('設施傢俬：跟住設施位置搬', () => {
 test('漫遊：傢俬會擋路（用餐區餐枱）', () => {
   const t = plan.items.find(i => i.type === 'dining_table');   // 用餐區直放餐枱
   const p = stepWalk({ x: t.x, y: 1420 }, { x: t.x, y: 1100 }, col);
-  assert.ok(p.y >= t.y + t.w / 2 + WALK_R - 1, `穿過咗餐枱：y = ${p.y}`);
+  assert.ok(p.y >= t.y + t.h / 2 + WALK_R - 1, `穿過咗餐枱：y = ${p.y}`);
 });
 
 // 每層嘅碰撞（連樓梯）同可以行到嘅範圍

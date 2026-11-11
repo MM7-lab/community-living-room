@@ -40,6 +40,7 @@ const MAT_SPEC = {
   chrome: [0xC9CED2], red: [0xD9573F], blue: [0x5B8FC9], green: [0x79B86F], yellow: [0xF2C14E], pink: [0xEE9FB0],
   white: [0xFBFAF7], sofa: [0x958A7E], cushion: [0xACA196], leather: [0x6F6A66], rubber: [0x6E9E96], black: [0x35302C], glassdark: [0x6F93AD],
   stair: [0xD8B48A], slab: [0xE9DCC8], rugc: [0x8C7C34], rugc2: [0x9C8C42], tunnel: [0x8FC1E3], kiosk: [0xF3EEE6],
+  stainless: [0xD3D8DC], graphite: [0x5C5D60], slate: [0x8EA3B5], birch: [0xE8D3B2], mirror: [0xE3ECF2], periwinkle: [0x8496CF], orange: [0xE07B39], canvas: [0xEADCC3],
   sage: [0x9DB58A], teal: [0x2F6153], denim: [0x5B87B8], baffle: [0x3A3633], step: [0xE6DCCD],
 };
 const WOOD = new Set(['window1', 'window2', 'cube3', 'sqcab', 'rectcab', 'bigrect', 'incentive', 'tv_cabinet', 'roomsupply', 'signin']);
@@ -105,7 +106,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
     if (key === 'ceiling') return (M.ceiling = new T.MeshStandardMaterial({ color: 0xFFF8EE, emissive: 0x6E6458, roughness: 1, side: T.DoubleSide }));
     const s = MAT_SPEC[key] || [0xcccccc];
     return (M[key] = new T.MeshStandardMaterial({
-      color: s[0], roughness: key === 'chrome' ? 0.35 : 0.88, metalness: key === 'chrome' ? 0.55 : key === 'steel' ? 0.25 : 0,
+      color: s[0], roughness: key === 'chrome' ? 0.35 : key === 'mirror' || key === 'stainless' ? 0.3 : 0.88, metalness: key === 'chrome' ? 0.55 : key === 'mirror' ? 0.15 : key === 'stainless' ? 0.12 : key === 'steel' ? 0.25 : 0,
       transparent: s[1] !== undefined, opacity: s[1] ?? 1,
       side: key === 'floor' || key === 'ceiling' || key === 'ground' ? T.DoubleSide : T.FrontSide,
     }));
@@ -223,14 +224,15 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         break;
       }
       case 'kitchen': {
-        box3(g, w, H - 4, d - 4, 0, 0, -2, 'white');
-        box3(g, w + 2, 4, d + 2, 0, H - 4, 0, 'top');
+        box3(g, w, H - 4, d - 4, 0, 0, -2, 'wood');                   // 木櫃身、不鏽鋼枱面
+        box3(g, w + 2, 4, d + 2, 0, H - 4, 0, 'stainless');
         box3(g, 45, 2, 35, -w / 4, H - 1, 0, 'chrome', false);         // 盆
         box3(g, 55, 1.5, 45, w / 4, H, 0, 'black', false);              // 電磁爐
         break;
       }
       case 'fridge': {
-        box3(g, w, H, d, 0, 0, 0, 'white');
+        box3(g, w, H, d, 0, 0, 0, it.type === 'fridge4' ? 'stainless' : 'white');
+        if (it.type === 'fridge4') box3(g, 1, H - 6, 1, 0, 3, d / 2 + 0.5, 'dark', false);
         box3(g, w + 0.5, 1.5, 1, 0, H * 0.66, d / 2, 'steel', false);
         box3(g, 3, 45, 4, w / 2 - 8, H * 0.25, d / 2 + 2, 'chrome', false);
         box3(g, 3, 28, 4, w / 2 - 8, H * 0.72, d / 2 + 2, 'chrome', false);
@@ -253,10 +255,10 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         for (const sx of [-1, 1]) for (const sz of [-1, 1]) box3(g, 4, H - 4, 4, sx * (w / 2 - 6), 0, sz * (d / 2 - 6), leg, false);
         break;
       }
-      case 'roundtable':
-        cyl3(g, w / 2, w / 2, 4, 0, H - 4, 0, 'white', 32);
-        cyl3(g, 4, 4, H - 4, 0, 0, 0, 'steel', 12);
-        cyl3(g, w / 4, w / 4, 3, 0, 0, 0, 'steel', 24);
+      case 'roundtable':                                              // 樺木圓几：三隻腳、下層托盤
+        cyl3(g, w / 2, w / 2, 3, 0, H - 3, 0, 'birch', 32);
+        cyl3(g, w / 2 - 4, w / 2 - 4, 6, 0, 8, 0, 'birch', 32);
+        for (const a of [0, 2.1, 4.2]) cyl3(g, 1.8, 1.8, H - 3, Math.cos(a) * (w / 2 - 5), 0, Math.sin(a) * (w / 2 - 5), 'birch', 8);
         break;
       case 'massage': {
         box3(g, w - 10, 22, d - 30, 0, 0, -6, 'black');                      // 底座
@@ -291,9 +293,14 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
       }
       case 'mat': box3(g, w, Math.max(H, 1.5), d, 0, 0, 0, 'rubber', false); break;
       case 'rug': box3(g, w, 1.2, d, 0, 0, 0, 'rugc', false); box3(g, w - 30, 1.4, d - 30, 0, 0, 0, 'rugc2', false); break;
-      case 'upper':                                                   // 吊櫃：離地 150 cm
-        box3(g, w, H, d, 0, 150, 0, 'sage');
-        for (let i = 1; i < Math.round(w / 50); i++) box3(g, 1, H - 4, 1, -w / 2 + i * w / Math.round(w / 50), 152, d / 2, 'dark', false);
+      case 'upper': {                                                 // 吊櫃：綠色離地 150 cm；木吊櫃頂住天花
+        const wood = it.type === 'upper_wood', y0 = wood ? WALL_H - H : 150;
+        if (wood && low) return null;
+        box3(g, w, H, d, 0, y0, 0, wood ? 'wood' : 'sage');
+        for (let i = 1; i < Math.round(w / 50); i++) box3(g, 1, H - 4, 1, -w / 2 + i * w / Math.round(w / 50), y0 + 2, d / 2, 'dark', false);
+        break;
+      }
+      case 'tvniche': box3(g, w, H, d, 0, 92, 0, 'slate', false);
         break;
       case 'ring': {                                                  // 圓形 LED 吊燈：淨係完整牆身先見
         if (low) return null;
@@ -328,34 +335,79 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
       case 'arch': {                                                  // 綠色拱門屏風，有大細兩個圓窿
         const sh = new T.Shape();
         sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, H); sh.lineTo(-w / 2, H); sh.lineTo(-w / 2, 0);
-        const hole = (cx, cy, r) => { const p = new T.Path(); p.absarc(cx, cy, r, 0, Math.PI * 2, true); sh.holes.push(p); };
-        hole(w / 2 - 70, 105, 55); hole(-w / 2 + 50, 200, 30);
-        const geo = new T.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false, curveSegments: 24 }); geo.translate(0, 0, -d / 2);
+        const geo = new T.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false }); geo.translate(0, 0, -d / 2);
         g.add(new T.Mesh(geo, mat('sage')));
+        for (const [cx, cy, r] of [[w / 2 - 70, 105, 55], [-w / 2 + 50, 200, 30]]) for (const z of [-1, 1]) {   // 兩面都有圓鏡
+          const m = cyl3(g, r, r, 0.6, 0, 0, 0, 'mirror', 40); m.rotation.x = Math.PI / 2; m.position.set(cx, cy, z * (d / 2 + 0.4));
+        }
         break;
       }
       case 'kioskwall': {                                             // 木牆身：自助服務機、資訊牌、鐘
         box3(g, w, H, d, 0, 0, 0, 'wood');
         box3(g, 26, 40, 4, -w / 2 + 18, 105, d / 2 + 2, 'white'); box3(g, 22, 30, 1, -w / 2 + 18, 112, d / 2 + 4, 'glassdark', false);
-        box3(g, 26, 30, 3, w / 2 - 18, 110, d / 2 + 1.5, 'white');
-        const clock = cyl3(g, 11, 11, 2, 0, 0, 0, 'white', 24); clock.rotation.x = Math.PI / 2; clock.position.set(-w / 2 + 18, 175, d / 2 + 1);
+        box3(g, 32, 38, 4, w / 2 - 24, 105, d / 2 + 2, 'white'); box3(g, 8, 10, 1, w / 2 - 24, 122, d / 2 + 4.5, 'orange', false);   // 飲水機（唔畫品牌）
+        const clock = cyl3(g, 17, 17, 2, 0, 0, 0, 'birch', 24); clock.rotation.x = Math.PI / 2; clock.position.set(-w / 2 + 40, 195, d / 2 + 1);
         break;
       }
       case 'armchair':
         box3(g, w, 40, d, 0, 0, 0, 'sofa'); box3(g, w - 20, 10, d - 22, 0, 40, 6, 'cushion');
         box3(g, w, 42, 16, 0, 40, -d / 2 + 8, 'sofa'); box3(g, 10, 20, d, -w / 2 + 5, 40, 0, 'sofa'); box3(g, 10, 20, d, w / 2 - 5, 40, 0, 'sofa');
         break;
-      case 'tunnel': {
-        const tube = new T.Mesh(new T.CylinderGeometry(w / 2, w / 2, d, 24, 1, true), mat('tunnel'));
-        tube.material.side = T.DoubleSide; tube.rotation.x = Math.PI / 2; tube.position.y = w / 2; tube.castShadow = true; g.add(tube);
+      case 'tunnel': {                                                // 藍色拱形軟墊（可以爬過）
+        const t = 14, r = w / 2, sh = new T.Shape();
+        sh.moveTo(-r, 0); sh.lineTo(-r, H - r); sh.absarc(0, H - r, r, Math.PI, 0, true); sh.lineTo(r, 0); sh.lineTo(r - t, 0);
+        sh.lineTo(r - t, H - r); sh.absarc(0, H - r, r - t, 0, Math.PI, false); sh.lineTo(-r + t, 0); sh.lineTo(-r, 0);
+        const geo = new T.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false, curveSegments: 16 }); geo.translate(0, 0, -d / 2);
+        g.add(new T.Mesh(geo, mat('periwinkle')));
         break;
       }
-      case 'kiosk': {
-        box3(g, w, 75, d, 0, 0, 0, 'kiosk');
-        const cuff = new T.Mesh(new T.TorusGeometry(18, 4, 10, 28, Math.PI * 1.25), mat('chrome'));   // 量血壓機個圈
-        cuff.position.set(w / 4, 95, 0); g.add(cuff);
-        box3(g, w * 0.4, 45, 8, -w / 5, 80, -d / 2 + 12, 'white');
-        box3(g, w * 0.34, 32, 2, -w / 5, 86, -d / 2 + 17, 'glassdark', false);
+      case 'teepee': {
+        const cone = new T.Mesh(new T.ConeGeometry(w / 2, H, 4), mat('canvas')); cone.rotation.y = Math.PI / 4; cone.position.y = H / 2; g.add(cone);
+        for (const a of [0.8, 2.4, 3.9, 5.5]) box3(g, 2, 25, 2, Math.cos(a) * 8, H - 5, Math.sin(a) * 8, 'wood', false);
+        break;
+      }
+      case 'stripemat':
+        for (let i = 0; i < 5; i++) box3(g, w, 1.5, d / 5, 0, 0, -d / 2 + d / 10 + i * d / 5, i % 2 ? 'cushion' : 'white', false);
+        break;
+      case 'orangearch': {                                            // 橙色牆板：左下角係大弧
+        const sh = new T.Shape(), R = Math.min(w, H) * 0.7;
+        sh.moveTo(-w / 2, R); sh.lineTo(-w / 2, H); sh.lineTo(w / 2, H); sh.lineTo(w / 2, 0); sh.lineTo(-w / 2 + R, 0); sh.absarc(-w / 2 + R, R, R, -Math.PI / 2, Math.PI, true);
+        const m = new T.Mesh(new T.ExtrudeGeometry(sh, { depth: 2, bevelEnabled: false, curveSegments: 20 }), mat('orange')); m.position.z = d / 2 - 2; g.add(m);
+        break;
+      }
+      case 'niche': {                                                 // 弧頂鏡櫃
+        const sh = new T.Shape(); sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, H - w / 2); sh.absarc(0, H - w / 2, w / 2, 0, Math.PI, false); sh.lineTo(-w / 2, 0);
+        const m = new T.Mesh(new T.ShapeGeometry(sh, 16), mat('mirror')); m.position.set(0, 115, d / 2 + 0.3); g.add(m);
+        break;
+      }
+      case 'steelsink':                                               // 不鏽鋼盆枱：四腳、層板、盆
+        box3(g, w, 4, d, 0, H - 4, 0, 'stainless');
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) box3(g, 4, H - 4, 4, sx * (w / 2 - 4), 0, sz * (d / 2 - 4), 'stainless', false);
+        box3(g, w - 8, 2, d - 8, 0, 18, 0, 'stainless', false); box3(g, 50, 2, 38, -w / 4, H - 1, 0, 'dark', false);
+        box3(g, w, 25, 3, 0, H, -d / 2 + 1.5, 'stainless', false);
+        break;
+      case 'hood': if (low) return null; box3(g, w, H, d, 0, 195, 0, 'stainless'); break;
+      case 'walloven': if (low) return null; box3(g, w, H, d, 0, 140, 0, 'stainless'); box3(g, w * 0.6, H * 0.6, 1, -w * 0.1, 152, d / 2, 'glassdark', false); break;
+      case 'dumbbell': {                                              // A 字啞鈴架
+        for (const sx of [-1, 1]) { const leg = box3(g, 5, H, 5, sx * w * 0.22, 0, 0, 'black', false); leg.rotation.z = sx * 0.22; }
+        box3(g, w, 4, d, 0, 0, 0, 'black', false);
+        for (let i = 0; i < 4; i++) for (const sx of [-1, 1]) cyl3(g, 6, 6, 18 - i * 2, sx * (w * 0.28 - i * 4), 18 + i * 20, d / 2 - 8, 'black', 6).rotation.x = Math.PI / 2;
+        break;
+      }
+      case 'bench':                                                   // 木腳軟墊長櫈＋靠墊
+        box3(g, w, H - 8, d, 0, 0, 0, 'wood'); box3(g, w, 8, d, 0, H - 8, 0, 'cushion');
+        box3(g, w - 10, 60, 8, 0, H + 15, -d / 2 + 4, 'cushion');
+        break;
+      case 'paykiosk':                                               // 牆身洗衣付款機
+        box3(g, w, H, d, 0, 110, 0, 'white'); box3(g, w - 8, 26, 1, 0, 125, d / 2, 'glassdark', false); box3(g, 14, 7, 2, 0, 113, d / 2, 'yellow', false);
+        break;
+      case 'padwall': box3(g, w, H, d, 0, 0, 0, 'sage'); break;
+      case 'kiosk': {                                                 // 健康站：半圓白枱、綠色腳、量血壓機、藍色私隱屏風
+        box3(g, w * 0.5, 75, d * 0.4, w * 0.2, 0, 0, 'sage');
+        box3(g, w, 3, d, 0, 75, 0, 'white');
+        box3(g, 30, 32, 28, -w * 0.15, 78, -d / 2 + 18, 'white');
+        const cuff = cyl3(g, 9, 9, 3, 0, 0, 0, 'denim', 20); cuff.rotation.x = Math.PI / 2; cuff.position.set(-w * 0.15, 94, -d / 2 + 33);
+        const scr = new T.Mesh(new T.TorusGeometry(26, 2.5, 8, 30), mat('denim')); scr.rotation.y = Math.PI / 2; scr.position.set(w / 2 - 8, 115, 0); g.add(scr);
         break;
       }
       case 'playmat': {
@@ -382,7 +434,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
       case 'laundry': {
         const u = H / 2;
         for (let k = 0; k < 2; k++) {
-          box3(g, w, u - 1, d, 0, k * u, 0, 'white');
+          box3(g, w, u - 1, d, 0, k * u, 0, 'graphite');
           box3(g, w - 6, 8, 2, 0, k * u + u - 14, d / 2 + 1, 'steel', false);          // 控制板
           const ring = cyl3(g, 19, 19, 3, 0, 0, 0, 'chrome', 28); ring.rotation.x = Math.PI / 2; ring.position.set(0, k * u + u * 0.42, d / 2 + 1.5);
           const glassM = cyl3(g, 14, 14, 3.4, 0, 0, 0, 'glassdark', 28); glassM.rotation.x = Math.PI / 2; glassM.position.set(0, k * u + u * 0.42, d / 2 + 1.8);
@@ -502,7 +554,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
     const color = new T.Color(f.color);
     let mesh;
     if (f.area) {
-      mesh = new T.Mesh(new T.ShapeGeometry(shapeOf(f.area)), new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.14, depthWrite: false, side: T.DoubleSide }));
+      mesh = new T.Mesh(new T.ShapeGeometry(shapeOf(f.area)), new T.MeshBasicMaterial({ color, transparent: true, opacity: f.highlight ? 0.3 : 0.14, depthWrite: false, side: T.DoubleSide }));
       mesh.rotation.x = -Math.PI / 2; mesh.userData.lift = 1.2;
     } else {
       mesh = new T.Mesh(new T.RingGeometry(48, 66, 40), new T.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide }));
@@ -531,7 +583,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
 
   /* ---------- 設施標記（HTML，字體清楚，手機易撳） ---------- */
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  pinHost.innerHTML = '<svg class="pin-leaders" aria-hidden="true"></svg>' + facilities.map(f => `<button type="button" class="pin" data-fid="${esc(f.id)}" style="--c:${f.color}" aria-label="${esc(f.name)}"><span class="pin-i" aria-hidden="true">${esc(f.icon)}</span><span class="pin-t">${esc(f.name)}</span></button>`).join('');
+  pinHost.innerHTML = '<svg class="pin-leaders" aria-hidden="true"></svg>' + facilities.map(f => `<button type="button" class="pin${f.highlight ? ' hi' : ''}" data-fid="${esc(f.id)}" style="--c:${f.color}" aria-label="${esc(f.name)}"><span class="pin-i" aria-hidden="true">${esc(f.icon)}</span><span class="pin-t">${esc(f.name)}${f.highlight ? ' ★' : ''}</span></button>`).join('');
   const leaders = pinHost.querySelector('.pin-leaders');
   const pins = facilities.map((f, i) => ({ f, i, el: pinHost.querySelector(`[data-fid="${CSS.escape(f.id)}"]`), fw: 0, fh: 0, cw: 0, last: '', line: '' }));
   pinHost.addEventListener('click', e => { const p = e.target.closest('[data-fid]'); if (p) onPick?.(p.dataset.fid); });
@@ -549,7 +601,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
     const list = pins.map(p => {
       v3.set(p.f.at.x, baseOf(fFloor(p.f)) + PIN_Y, p.f.at.y).project(camera);
       return { p, x: (v3.x + 1) / 2 * W, y: (1 - v3.y) / 2 * H, z: v3.z, d: Math.hypot(p.f.at.x - cam2.x, p.f.at.y - cam2.y) };
-    }).sort((a, c) => (c.p.f.id === hi) - (a.p.f.id === hi) || (walking ? a.d - c.d : a.p.i - c.p.i));
+    }).sort((a, c) => (c.p.f.id === hi) - (a.p.f.id === hi) || (!!c.p.f.highlight - !!a.p.f.highlight) || (walking ? a.d - c.d : a.p.i - c.p.i));
     let dirty = false;
     // 畫面上嘅掣（例如「返回全景」）當係障礙物，標記唔好擺喺佢哋下面。
     const cr = renderer.domElement.getBoundingClientRect();
@@ -569,7 +621,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
       if (show) {
         const rect = (cx, w, bottom) => [cx - w / 2 - 3, bottom - p.fh - 3, cx + w / 2 + 3, bottom + 3];
         let r = rect(x, p.fw, y);
-        if (p.f.id !== hi && overlaps(r)) {
+        if (p.f.id !== hi && !(p.f.highlight && !hi) && overlaps(r)) {
           compact = true;
           const cands = [rect(x, p.cw, y)];
           placed.forEach(q => {
@@ -603,7 +655,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
     hi = fid || null;
     facilities.forEach(f => {
       const m = fxBy[f.id];
-      m.material.opacity = f.area ? (f.id === hi ? 0.42 : 0.14) : (f.id === hi ? 0.9 : 0);
+      m.material.opacity = f.area ? (f.id === hi ? 0.42 : f.highlight ? 0.3 : 0.14) : (f.id === hi ? 0.9 : 0);
       m.scale.set(1, 1, 1);
     });
     pins.forEach(p => { p.last = ''; });

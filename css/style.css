@@ -355,3 +355,11 @@ h1, h2, h3, p { margin: 0; }
 .f-upper, .f-arch { vector-effect: non-scaling-stroke; }
 .f-upper { fill: none; stroke: #7E9A6B; stroke-width: 1.2; stroke-dasharray: 4 3; }
 .f-arch { fill: #9DB58A; stroke: #6F8A5D; stroke-width: 1.2; }
+.f-tent, .f-steel { vector-effect: non-scaling-stroke; }
+.f-tent { fill: #EADCC3; stroke: #B9A27E; stroke-width: 1.2; }
+.f-steel { fill: #DDE1E4; stroke: #9AA3AA; stroke-width: 1.2; }
+/* 重點設施（highlight）：金色星標、標記加框、範圍顏色深啲 */
+.tag.hi { background: #FFE08A; color: #6B4300; }
+.pin.hi { box-shadow: 0 0 0 3px #F2B33B, 0 4px 14px rgba(62, 43, 32, .3); }
+.frow.is-hi { box-shadow: inset 0 0 0 3px #F2B33B; }
+.p-area.hi { fill-opacity: .26; stroke-opacity: .9; stroke-dasharray: none; stroke-width: 3; }

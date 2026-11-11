@@ -44,7 +44,13 @@ function symbol(sym, w, h, type = '') {
     case 'armchair': return rect(X, Y, w, h, 'f-sofa', 12) + rect(X + 10, Y + 16, w - 20, h - 20, 'f-cushion', 6);
     case 'tunnel': return rect(X, Y, w, h, 'f-tunnel', w / 2) + `<circle class="f-line" cx="0" cy="${r2(Y + w / 2)}" r="${r2(w / 2 - 6)}"/>`;
     case 'upper': return rect(X, Y, w, h, 'f-upper', 2);
-    case 'ring': case 'acoustic': case 'baffle': return '';
+    case 'ring': case 'acoustic': case 'baffle': case 'orangearch': case 'niche': case 'walloven': case 'padwall': case 'paykiosk': case 'tvniche': return '';
+    case 'hood': return rect(X, Y, w, h, 'f-upper', 2);
+    case 'teepee': return `<path class="f-tent" d="M 0 ${r2(Y)} L ${r2(X + w)} 0 L 0 ${r2(Y + h)} L ${r2(X)} 0 Z"/>`;
+    case 'stripemat': return [0, 1, 2, 3, 4].map(i => rect(X, Y + i * h / 5, w, h / 5, i % 2 ? 'f-cushion' : 'f-white')).join('');
+    case 'steelsink': return rect(X, Y, w, h, 'f-steel', 2) + rect(-w / 4 - 25, -19, 50, 38, 'f-line', 4);
+    case 'dumbbell': return rect(X, Y, w, h, 'f-dark', 4);
+    case 'bench': return rect(X, Y, w, h, 'f-cushion', 4) + line(X, Y + 8, X + w, Y + 8);
     case 'rail': return rect(X, Y, w, Math.max(h, 4), 'f-dark', 2);
     case 'platform': return rect(X, Y, w, h, 'f-body', 2) + line(X, Y + 25, X + w, Y + 25);
     case 'arch': return rect(X, Y, w, Math.max(h, 6), 'f-arch', 2);
@@ -76,7 +82,7 @@ function planSvg(plan, facilities, vb, stairs, stairsRole) {
   let h = `<svg class="plan-svg" viewBox="${r2(vb.x)} ${r2(vb.y)} ${r2(vb.w)} ${r2(vb.h)}" role="img" aria-label="社區客廳平面圖">`;
   plan.rooms.forEach(r => { h += `<polygon class="p-room" points="${r.pts.map(p => r2(p.x) + ',' + r2(p.y)).join(' ')}"/>`; });
   facilities.forEach(f => {
-    if (f.area) h += `<polygon class="p-area" data-area="${esc(f.id)}" style="--c:${f.color}" points="${f.area.map(p => r2(p.x) + ',' + r2(p.y)).join(' ')}"/>`;
+    if (f.area) h += `<polygon class="p-area${f.highlight ? ' hi' : ''}" data-area="${esc(f.id)}" style="--c:${f.color}" points="${f.area.map(p => r2(p.x) + ',' + r2(p.y)).join(' ')}"/>`;
   });
   // 先畫傢俬，再畫牆，最後畫門窗。
   const layer = it => (it.type === 'door' || it.type === 'door2' || it.type === 'window' || it.type === 'column') ? 2 : 1;
@@ -117,7 +123,7 @@ export function createPlan2D({ host, plan, facilities, onPick, stairs = null, st
       </div>
     </div>
     <ol class="legend">
-      ${facilities.map(f => `<li><button type="button" data-fid="${esc(f.id)}" style="--c:${f.color}"><span class="lg-n">${f.no}</span><span class="lg-i" aria-hidden="true">${esc(f.icon)}</span><span class="lg-name">${esc(f.name)}</span>${f.staffOnly ? '<span class="tag">職員專用</span>' : ''}</button></li>`).join('')}
+      ${facilities.map(f => `<li><button type="button" data-fid="${esc(f.id)}" style="--c:${f.color}"><span class="lg-n">${f.no}</span><span class="lg-i" aria-hidden="true">${esc(f.icon)}</span><span class="lg-name">${esc(f.name)}</span>${f.highlight ? '<span class="tag hi">★</span>' : ''}${f.staffOnly ? '<span class="tag">職員專用</span>' : ''}</button></li>`).join('')}
     </ol>`;
   const scroll = host.querySelector('.plan-scroll'), box = host.querySelector('.plan-box');
   const pins = [...host.querySelectorAll('.ppin')], leaders = host.querySelector('.plan-leaders');

@@ -44,9 +44,9 @@ function renderShell() {
   dr.hidden = !draft;
   dr.textContent = S.data.tentative ? '試行版：設施位置同開放時間仲整緊，會陸續補上。' : '試行版：部分資料仲整緊，會陸續補上。';
 
-  $('#flist').innerHTML = facilities.map(f => `<li><button type="button" class="frow" data-fid="${esc(f.id)}" style="--c:${f.color}">
+  $('#flist').innerHTML = facilities.map(f => `<li><button type="button" class="frow${f.highlight ? ' is-hi' : ''}" data-fid="${esc(f.id)}" style="--c:${f.color}">
       <span class="frow-n">${f.no}</span><span class="frow-i" aria-hidden="true">${esc(f.icon)}</span>
-      <span class="frow-main"><span class="frow-name">${esc(f.name)}${floorTag(f)}${f.staffOnly ? ' <span class="tag">職員專用</span>' : ''}${f.tentative ? ' <span class="tag soft">位置暫定</span>' : ''}</span>
+      <span class="frow-main"><span class="frow-name">${esc(f.name)}${f.highlight ? ' <span class="tag hi">★ 重點</span>' : ''}${floorTag(f)}${f.staffOnly ? ' <span class="tag">職員專用</span>' : ''}${f.tentative ? ' <span class="tag soft">位置暫定</span>' : ''}</span>
       <span class="frow-sum">${esc(f.summary || '簡介稍後補上')}</span>
       <span class="frow-hours">🕒 ${esc(f.hours || f.booking || '開放時間稍後補上')}</span></span>
       <span class="frow-go" aria-hidden="true">›</span></button></li>`).join('');
@@ -141,7 +141,7 @@ function openCard(fid) {
     : `<div class="ph-empty"><span aria-hidden="true">${esc(f.icon)}</span><small>相片稍後補上</small></div>`;
   const img = ph.querySelector('img');
   if (img) img.addEventListener('error', () => { ph.innerHTML = `<div class="ph-empty"><span aria-hidden="true">${esc(f.icon)}</span><small>相片暫時睇唔到</small></div>`; }, { once: true });
-  $('#card-kicker').innerHTML = `<span class="num" style="--c:${f.color}">${f.no}</span>設施 ${f.no} / ${S.data.facilities.length}${floorTag(f)}${f.staffOnly ? '<span class="tag">職員專用</span>' : ''}${f.tentative ? '<span class="tag soft">位置暫定</span>' : ''}`;
+  $('#card-kicker').innerHTML = `<span class="num" style="--c:${f.color}">${f.no}</span>設施 ${f.no} / ${S.data.facilities.length}${f.highlight ? ' <span class="tag hi">★ 重點</span>' : ''}${floorTag(f)}${f.staffOnly ? '<span class="tag">職員專用</span>' : ''}${f.tentative ? '<span class="tag soft">位置暫定</span>' : ''}`;
   $('#card-title').innerHTML = `<span aria-hidden="true">${esc(f.icon)}</span> ${esc(f.name)}`;
   $('#card-summary').textContent = f.summary || '簡介稍後補上。';
   $('#card-summary').classList.toggle('pending', !f.summary);
@@ -300,7 +300,7 @@ function renderTour(st) {
   $('#tour-ctrl').hidden = done; $('#tour-done').hidden = !done;
   $('#tour-more').hidden = done;
   $('#tour-step').textContent = done ? '導覽完結' : `第 ${st.idx + 1} 站，共 ${st.total} 站${S.floors.length > 1 ? `・${floorName(st.floor)}` : ''}`;
-  $('#tour-title').innerHTML = done ? '多謝收睇 🎉' : `<span aria-hidden="true">${esc(f.icon)}</span> ${esc(f.name)}${f.staffOnly ? ' <span class="tag">職員專用</span>' : ''}`;
+  $('#tour-title').innerHTML = done ? '多謝收睇 🎉' : `<span aria-hidden="true">${esc(f.icon)}</span> ${esc(f.name)}${f.highlight ? ' <span class="tag hi">★ 重點</span>' : ''}${f.staffOnly ? ' <span class="tag">職員專用</span>' : ''}`;
   $('#tour-text').textContent = done ? '可以撳「再睇一次」，或者返去 3D 地圖自己周圍睇。' : (f.tour || f.summary || '簡介稍後補上。');
   const play = $('#tour-play');
   play.innerHTML = st.paused ? '▶<span>繼續</span>' : '⏸<span>暫停</span>';
