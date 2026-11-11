@@ -413,6 +413,10 @@ export function normalizeCenter(raw, plans) {
       staffOnly: f.staffOnly === true, tentative: f.tentative === true, highlight: f.highlight === true, at: at || { x: 0, y: 0 }, area, radius: isNum(f.radius) ? +f.radius : 150, view, color,
       floor, stairs,
       // 設備同使用規矩：type 對應 3D 入面嘅傢俬類型（撳件嘢會跳去呢項）
+      main: f.main === true,
+      // 三步卡：點樣用（最多 5 步）；stepsNote 可以寫「草稿，待確認」之類
+      steps: (Array.isArray(f.steps) ? f.steps : []).map(x => typeof x === 'string' ? { icon: '', text: str(x, 120) } : { icon: str(x?.icon, 8), text: str(x?.text, 120) }).filter(x => x.text).slice(0, 5),
+      stepsNote: str(f.stepsNote, 80),
       people: (Array.isArray(f.people) ? f.people : []).filter(p => p && str(p.role, 40)).slice(0, 12).map(p => ({ role: str(p.role, 40), name: str(p.name, 30), icon: str(p.icon, 8), intro: str(p.intro, 300) })),
       equipment: (Array.isArray(f.equipment) ? f.equipment : []).filter(e => e && str(e.name, 60)).slice(0, 40).map(e => ({
         type: str(e.type, 40), name: str(e.name, 60), icon: str(e.icon, 8), note: str(e.note, 200),
@@ -440,7 +444,13 @@ export function normalizeCenter(raw, plans) {
   const pending = facilities.filter(f => !f.summary || !(f.hours || f.booking)).length;
   const tentative = facilities.filter(f => f.tentative).length;
   const pendingOf = f => !f.stairs && (!f.summary || !(f.hours || f.booking));
-  return { center, floors, facilities, start, updated: str(raw.updated, 20), draft: raw.draft === true || facilities.some(pendingOf) || tentative > 0, pending: facilities.filter(pendingOf).length, tentative, errors, warnings };
+  // 首頁「我想……」：每個掣帶去一個設施
+  const wants = (Array.isArray(raw.wants) ? raw.wants : []).slice(0, 12).map(w => ({ icon: str(w?.icon, 8) || '👉', label: str(w?.label, 20), to: str(w?.to, 40) })).filter(w => {
+    if (!w.label) return false;
+    if (!facilities.some(f => f.id === w.to)) { errors.push(`「我想……」入面「${w.label}」指去嘅設施（to: ${w.to}）搵唔到。`); return false; }
+    return true;
+  });
+  return { center, wants, floors, facilities, start, updated: str(raw.updated, 20), draft: raw.draft === true || facilities.some(pendingOf) || tentative > 0, pending: facilities.filter(pendingOf).length, tentative, errors, warnings };
 }
 
 // 某層有邊啲設施（floor 寫 "all" 嘅例如樓梯，每層都有）

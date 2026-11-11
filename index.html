@@ -15,10 +15,19 @@
   <div class="brand">
     <div class="brand-text"><h1 id="title">社區客廳</h1><p id="subtitle">3D 導覽地圖</p></div>
   </div>
+  <button type="button" class="top-btn primary" id="btn-wants" hidden>🙋 我想…</button>
   <button type="button" class="top-btn" id="info-btn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 10.5v6.5M12 7.2v.1" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>資料</button>
 </header>
 <p class="draft" id="draft" hidden></p>
 
+<div class="wants" id="wants" hidden role="dialog" aria-modal="true" aria-labelledby="wants-h">
+  <div class="wants-box">
+    <h2 id="wants-h">你好！今日想做啲咩？</h2>
+    <p class="wants-sub">撳一個，我帶你去睇喺邊同點樣用。</p>
+    <div class="wants-grid" id="wants-grid"></div>
+    <button type="button" class="btn wants-skip" id="wants-close">自己睇地圖</button>
+  </div>
+</div>
 <main class="stage">
   <section class="view view-3d" id="view-3d" aria-label="3D 地圖">
     <div class="v3-canvas" id="v3-canvas"></div>
@@ -38,7 +47,7 @@
     <div class="floor-flash" id="floor-flash" aria-hidden="true"></div>
     <div class="v3-tools" id="v3-tools" hidden>
       <button type="button" class="pill-btn" id="btn-walls" aria-pressed="false">顯示完整牆身</button>
-      <button type="button" class="pill-btn" id="btn-labels" aria-pressed="false">隱藏標記</button>
+      <button type="button" class="pill-btn" id="btn-labels">標記：常用</button>
       <button type="button" class="pill-btn" id="btn-reset">返回全景</button>
     </div>
     <p class="hint" id="hint" hidden>撳彩色圖示睇設施資料<br><span>一指拖動轉角度・兩指放大縮細</span></p>
@@ -105,6 +114,7 @@
       <p class="card-kicker" id="card-kicker"></p>
       <h2 class="card-title" id="card-title"></h2>
       <p class="card-summary" id="card-summary"></p>
+      <section class="card-steps" id="card-steps" hidden></section>
       <dl class="card-rows" id="card-rows"></dl>
       <section class="card-people" id="card-people" hidden></section>
       <section class="card-equip" id="card-equip" hidden></section>

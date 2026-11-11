@@ -161,6 +161,9 @@ function openCard(fid, itemType = null) {
   const pp = $('#card-people');
   pp.hidden = !f.people.length;
   pp.innerHTML = f.people.length ? '<h3>邊個可以幫你</h3>' + f.people.map(p => `<div class="person"><span class="person-i" aria-hidden="true">${esc(p.icon || '🙂')}</span><div><strong>${esc(p.name ? p.name + '・' + p.role : p.role)}</strong><p${p.intro ? '' : ' class="pending"'}>${esc(p.intro || '自我介紹稍後補上。')}</p></div></div>`).join('') : '';
+  const stp = $('#card-steps');
+  stp.hidden = !f.steps.length;
+  stp.innerHTML = f.steps.length ? `<h3>點樣用${f.stepsNote ? ` <span class="tag soft">${esc(f.stepsNote)}</span>` : ''}</h3><ol class="steps">${f.steps.map((x, i) => `<li><span class="step-n">${i + 1}</span><span class="step-i" aria-hidden="true">${esc(x.icon)}</span><span class="step-t">${esc(x.text)}</span></li>`).join('')}</ol>` : '';
   openSheet('#card');
   const hit = itemType && eq.querySelector('details[open]');
   if (hit) setTimeout(() => hit.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 350);
@@ -301,11 +304,29 @@ $('#btn-walls').addEventListener('click', e => {
   e.currentTarget.textContent = on ? '改返矮牆' : '顯示完整牆身';
   S.view?.setFullWalls(on);
 });
-$('#btn-labels').addEventListener('click', e => {
-  const off = e.currentTarget.getAttribute('aria-pressed') !== 'true';
-  e.currentTarget.setAttribute('aria-pressed', off);
-  e.currentTarget.textContent = off ? '顯示標記' : '隱藏標記';
-  $('#view-3d').classList.toggle('labels-off', off);   // 隱藏之後仍然可以撳 3D 模型睇資料
+// 標記三個狀態輪住轉：常用 → 全部 → 隱藏（隱藏之後仍然可以撳 3D 模型睇資料）
+const PIN_MODES = ['main', 'all', 'off'], PIN_TEXT = { main: '標記：常用', all: '標記：全部', off: '標記：隱藏' };
+function setPinMode(m) {
+  S.pinMode = m;
+  $('#btn-labels').textContent = PIN_TEXT[m];
+  $('#view-3d').classList.toggle('labels-off', m === 'off');
+  S.view?.setPinsAll(m === 'all');
+}
+$('#btn-labels').addEventListener('click', () => setPinMode(PIN_MODES[(PIN_MODES.indexOf(S.pinMode) + 1) % 3]));
+// 首頁「我想……」
+function openWants() { $('#wants').hidden = false; $('#wants-grid button')?.focus({ preventScroll: true }); }
+function closeWants() { $('#wants').hidden = true; }
+$('#btn-wants').addEventListener('click', openWants);
+$('#wants-close').addEventListener('click', closeWants);
+$('#wants-grid').addEventListener('click', e => {
+  const b = e.target.closest('[data-to]'); if (!b) return;
+  const f = S.data.facilities.find(x => x.id === b.dataset.to); if (!f) return;
+  closeWants();
+  if (S.tab !== '3d') setTab('3d');
+  const fl = f.floor === 'all' ? S.floor : f.floor;
+  if (S.view && S.view.floor !== fl) S.view.setFloor(fl);
+  S.view?.focus(f.id);
+  openCard(f.id);
 });
 $('#btn-reset').addEventListener('click', () => S.view?.resetView());
 
@@ -379,6 +400,12 @@ async function boot() {
   const t = location.hash.slice(1);
   setTab(TABS.includes(t) ? t : '3d', { push: false });
   await init3D();
+  setPinMode(S.data.facilities.some(f => f.main) ? 'main' : 'all');
+  if (S.data.wants.length) {
+    $('#wants-grid').innerHTML = S.data.wants.map(w => `<button type="button" data-to="${esc(w.to)}"><span aria-hidden="true">${esc(w.icon)}</span>${esc(w.label)}</button>`).join('');
+    $('#btn-wants').hidden = false;
+    if (!location.hash) openWants();     // 直接開某一頁（例如 #walk）就唔彈出
+  }
   debug.ready = true;
 }
 boot();

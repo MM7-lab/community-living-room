@@ -51,6 +51,10 @@ async function openPage(device, opts = {}) {
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(base + (opts.hash || ''));
   await page.waitForFunction(() => window.__clr?.ready === true, null, { timeout: 30000 });
+  if (!opts.keepHome) {   // 預設測試：閂首頁「我想……」，標記轉做「全部」
+    if (await page.locator('#wants').isVisible()) await page.click('#wants-close');
+    await page.evaluate(() => { while (window.__clr.S.pinMode !== 'all') document.querySelector('#btn-labels').click(); });
+  }
   return { ctx, page, errors };
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -278,6 +282,23 @@ await check('冇顯示地區名同標誌', async () => {
 await check('私隱：平面圖冇任何標籤（標籤可能有同事名）', async () => {
   const txt = await page.evaluate(async () => (await fetch('data/plan.json')).text());
   assert.equal(/"label"/.test(txt), false);
+});
+
+await check('首頁「我想……」帶去設施，資料卡有三步卡；地圖預設只顯示常用設施', async () => {
+  const h = await openPage(phone, { keepHome: true });
+  try {
+    assert.equal(await h.page.locator('#wants').isVisible(), true, '首頁冇彈出「我想……」');
+    await h.page.screenshot({ path: join(OUT, '00-wants.png') });
+    await h.page.click('#wants-grid [data-to="laundry"]');
+    await h.page.waitForSelector('#card:not([hidden])');
+    assert.ok((await h.page.textContent('#card-title')).includes('洗衣'));
+    assert.equal(await h.page.locator('#card-steps .steps li').count(), 3, '洗衣冇三步卡');
+    await sleep(1200); await h.page.screenshot({ path: join(OUT, '00b-steps.png') });
+    await h.page.click('#card .close-btn'); await h.page.click('#btn-reset'); await sleep(2500);
+    const st = await h.page.evaluate(() => window.__clr.S.view.pinState());
+    assert.equal(st.find(p => p.id === 'stairs').hidden, true, '預設唔應該顯示樓梯標記');
+    assert.equal(st.find(p => p.id === 'kitchen').hidden, false, '預設應該顯示廚房標記');
+  } finally { await h.ctx.close(); }
 });
 
 await check('冇 JavaScript 錯誤（手機）', async () => { assert.deepEqual(errors, []); });

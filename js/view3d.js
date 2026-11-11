@@ -628,11 +628,13 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
   pinHost.addEventListener('click', e => { const p = e.target.closest('[data-fid]'); if (p) onPick?.(p.dataset.fid); });
   function measurePins() {
     pins.forEach(p => {
+      const was = p.el.hidden; p.el.hidden = false;     // 收埋咗嘅標記量唔到大細，量度時暫時顯示
       p.el.classList.remove('compact'); p.fw = p.el.offsetWidth; p.fh = p.el.offsetHeight;
       p.el.classList.add('compact'); p.cw = p.el.offsetWidth; p.el.classList.remove('compact');
+      p.el.hidden = was; p.last = '';
     });
   }
-  let hi = null;
+  let hi = null, pinAll = !facilities.some(f => f.main);   // 有設定「常用」（main）就預設只顯示常用
   const v3 = new T.Vector3();
   function updatePins() {
     const W = renderer.domElement.clientWidth, H = renderer.domElement.clientHeight;
@@ -647,7 +649,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
     const placed = obstacles.filter(el => el.getClientRects().length && !el.closest('[hidden]')).map(el => { const r = el.getBoundingClientRect(); return [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; });
     const overlaps = r => placed.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
     list.forEach(({ p, x, y, z, d }) => {
-      let show = onFloorF(p.f) && z < 1 && x > -40 && x < W + 40 && y > -20 && y < H + 60;
+      let show = (pinAll || p.f.main || p.f.highlight || p.f.id === hi || mode === 'tour') && onFloorF(p.f) && z < 1 && x > -40 && x < W + 40 && y > -20 && y < H + 60;
       let op = 1;
       if (show && walking) {
         if (d > 1100 || lineBlocked(cam2, p.f.at, colOf(floor))) show = false;
@@ -1041,6 +1043,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
       inset = px; applyOffset(); pins.forEach(p => { p.last = ''; });
       if (mode === 'tour' && tour.active && tour.phase === 'dwell' && !tour.paused) flyTo(viewPose(facilities[tour.idx]), 0.5);
     },
+    setPinsAll(all) { pinAll = !!all; pins.forEach(p => { p.last = ''; }); },
     setFullWalls(full) { lowPref = !full; if (mode === 'overview') showWalls(full); },
     get fullWalls() { return wallsFull; },
     walkPad(key, down) { W.pad[key] = down; },
