@@ -15,76 +15,86 @@ const plans = { G: plan, '1F': plan1 };
 const center = load('data/center.json');
 const col = collisionData(plan);
 
-test('每道門同每個窗都準確對應一幅牆', () => {
-  const segs = baseSegments(plan);
-  for (const o of openingsOf(plan)) {
-    const on = segs.filter(s => holesOn(s, [o]).length);
-    assert.equal(on.length, 1, `${o.kind} ${o.id} 對應咗 ${on.length} 幅牆`);
+test('每道門同每個窗都準確對應一幅牆（兩層）', () => {
+  for (const pl of [plan, plan1]) {
+    const segs = baseSegments(pl);
+    for (const o of openingsOf(pl)) {
+      const on = segs.filter(s => holesOn(s, [o]).length);
+      assert.equal(on.length, 1, `${o.kind} ${o.id} 對應咗 ${on.length} 幅牆`);
+    }
   }
 });
 
-test('設施資料冇錯，入口係第一站，官方 8 項設施齊晒，分兩層', () => {
+test('設施資料冇錯：入口第一站、官方 8 項齊晒、分兩層', () => {
   const d = normalizeCenter(center, plans);
   assert.deepEqual(d.errors, []);
   assert.deepEqual(d.floors.map(f => f.name), ['地下', '一樓']);
   assert.equal(d.facilities[0].id, 'entrance');
-  assert.ok(d.facilities.some(f => f.stairs && f.floor === 'all'), '冇樓梯');
-  assert.ok(facilitiesOn(d.facilities, 'G').length > 1 && facilitiesOn(d.facilities, '1F').length > 1);
   const names = d.facilities.map(f => f.name);
   ['社區廚房', '洗衣及乾衣機', '按摩椅', '健身設備', '大電視', '圖書閣', '兒童遊樂室', '咖啡沖調設備區'].forEach(n => assert.ok(names.includes(n), `缺少 ${n}`));
   assert.equal(new Set(d.facilities.map(f => f.color)).size, d.facilities.length, '設施顏色重複');
-  d.facilities.forEach(f => assert.ok(insideBuilding(plan, f.at), `${f.name} 喺平面圖外面`));
+  assert.ok(d.facilities.some(f => f.stairs && f.floor === 'all'), '冇樓梯');
+  d.facilities.forEach(f => {
+    const pl = plans[f.floor === 'all' ? 'G' : f.floor];
+    assert.ok(insideBuilding(pl, f.at), `${f.name} 喺嗰層平面圖外面`);
+  });
+  assert.equal(d.facilities.find(f => f.id === 'kids').floor, '1F', '兒童遊樂室應該喺一樓 Play Room');
 });
 
 test('平面圖冇同事名或者任何標籤', () => {
-  const raw = readFileSync(new URL('../data/plan.json', import.meta.url), 'utf8');
-  assert.equal(/"label"/.test(raw), false, 'plan.json 唔可以有標籤（可能有同事名）');
+  for (const f of ['data/plan.json', 'data/plan-1f.json']) assert.equal(/"label"/.test(readFileSync(new URL('../' + f, import.meta.url), 'utf8')), false, `${f} 唔可以有標籤`);
 });
 
 test('漫遊：直行撞牆會停喺牆前面', () => {
-  // 向下行去儲物室間隔牆（y = 1292，8 cm 厚），唔可以穿過去。
-  const p = stepWalk({ x: 300, y: 1150 }, { x: 300, y: 1500 }, col);
-  assert.ok(p.y <= 1292 - 4 - WALK_R + 0.5, `y = ${p.y}`);
-  // 向左行去外牆（x = 0，15 cm 厚）。
-  const q = stepWalk({ x: 150, y: 900 }, { x: -300, y: 900 }, col);
-  assert.ok(q.x >= 7.5 + WALK_R - 0.5, `x = ${q.x}`);
+  // 洗衣區向東行去外牆（x = 600，15 cm 厚）
+  const p = stepWalk({ x: 450, y: 720 }, { x: 800, y: 720 }, col);
+  assert.ok(p.x <= 600 - 7.5 - WALK_R + 0.5, `x = ${p.x}`);
+  // Drop-in 區向北行：俾梳化同半玻璃間隔擋住，唔會入到廚房
+  const q = stepWalk({ x: -220, y: 980 }, { x: -220, y: 600 }, col);
+  assert.ok(q.y >= 795, `穿過咗間隔：y = ${q.y}`);
 });
 
 test('漫遊：一大步都唔會跳過牆', () => {
-  const p = stepWalk({ x: 300, y: 1250 }, { x: 300, y: 1340 }, col);
-  assert.ok(p.y < 1292, `一步跨咗過牆：y = ${p.y}`);
+  const p = stepWalk({ x: 480, y: 300 }, { x: 480, y: 200 }, col);
+  assert.ok(p.y > 250, `一步跨咗過牆：y = ${p.y}`);
 });
 
-test('漫遊：門口行得過（玻璃房門、儲物室門、正門）', () => {
-  const room = stepWalk({ x: 688, y: 690 }, { x: 688, y: 820 }, col);
-  assert.ok(room.y > 760, `入唔到玻璃房：y = ${room.y}`);
-  const store = stepWalk({ x: 495, y: 1250 }, { x: 495, y: 1360 }, col);
-  assert.ok(store.y > 1300, `入唔到儲物室：y = ${store.y}`);
-  // 正門：由走廊向外行出去
-  const out = stepWalk({ x: 647, y: 175 }, { x: 760, y: 65 }, col);
-  assert.ok(!insideBuilding(plan, out), '行唔出正門');
+test('漫遊：門口行得過（地下）', () => {
+  assert.ok(stepWalk({ x: 412, y: 320 }, { x: 412, y: 150 }, col).y < 240, '入唔到洗手間 2');
+  assert.ok(stepWalk({ x: 150, y: 476 }, { x: 300, y: 476 }, col).x > 215, '出唔到廚房門（DR-02）');
+  assert.ok(stepWalk({ x: 420, y: 1505 }, { x: 250, y: 1505 }, col).x < 330, '由大門口入唔到地下（DR-05）');
+  assert.ok(!insideBuilding(plan, stepWalk({ x: 420, y: 1520 }, { x: 420, y: 1700 }, col)), '行唔出大門');
 });
 
-test('漫遊：柱擋路', () => {
-  const p = resolveWalk({ x: 112, y: 1519 }, col);
-  assert.ok(Math.abs(p.x - 112) > 100 || Math.abs(p.y - 1519) > 30, '企咗喺柱入面');
+test('漫遊：門口行得過（一樓）', () => {
+  const c1 = collisionData(plan1);
+  assert.ok(stepWalk({ x: 420, y: 970 }, { x: 250, y: 970 }, c1).x < 345, '入唔到遊戲室');
+  assert.ok(stepWalk({ x: 420, y: 980 }, { x: 420, y: 1150 }, c1).y > 1045, '入唔到多用途室');
+  assert.ok(stepWalk({ x: 420, y: 760 }, { x: 420, y: 600 }, c1).y < 690, '入唔到辦公室');
+});
+
+test('漫遊：送餐升降機（柱）擋路', () => {
+  const p = resolveWalk({ x: 275, y: 80 }, col);
+  assert.ok(Math.abs(p.x - 275) > 60 || Math.abs(p.y - 80) > 70, '企咗喺升降機入面');
 });
 
 test('實心牆會遮住設施標記，玻璃牆唔會', () => {
-  assert.equal(lineBlocked({ x: 300, y: 1100 }, { x: 300, y: 1450 }, col), true);
-  assert.equal(lineBlocked({ x: 500, y: 1000 }, { x: 765, y: 1011 }, col), false);
+  assert.equal(lineBlocked({ x: 520, y: 600 }, { x: 520, y: 100 }, col), true);
+  assert.equal(lineBlocked({ x: -250, y: 900 }, { x: -250, y: 600 }, col), false, '半玻璃間隔應該睇得穿');
 });
 
 test('撳平面圖揀設施：點優先，再睇範圍，淨係揀同一層', () => {
   const d = normalizeCenter(center, plans), G = facilitiesOn(d.facilities, 'G'), F1 = facilitiesOn(d.facilities, '1F');
-  assert.equal(facilityAt(G, { x: 700, y: 130 })?.id, 'entrance');
-  assert.equal(facilityAt(G, { x: 725, y: 1170 })?.id, 'massage', '按摩椅（點）喺大電視範圍入面，點要優先');
-  assert.equal(facilityAt(G, { x: 850, y: 800 })?.id, 'tv');
-  assert.equal(facilityAt(G, { x: 850, y: 1450 })?.id, 'laundry');
-  assert.equal(facilityAt(G, { x: 100, y: 1450 }), null, '地下冇兒童遊樂室');
-  assert.equal(facilityAt(F1, { x: 100, y: 1450 })?.id, 'kids');
-  assert.equal(facilityAt(G, { x: 330, y: 1060 })?.id, 'stairs');
-  assert.equal(facilityAt(F1, { x: 330, y: 1060 })?.id, 'stairs', '樓梯兩層都有');
+  assert.equal(facilityAt(G, { x: 420, y: 1515 })?.id, 'entrance');
+  assert.equal(facilityAt(G, { x: -295, y: 1170 })?.id, 'massage');
+  assert.equal(facilityAt(G, { x: 150, y: 250 })?.id, 'tv', '大電視（點）喺廚房範圍入面，點要優先');
+  assert.equal(facilityAt(G, { x: -300, y: 420 })?.id, 'kitchen');
+  assert.equal(facilityAt(G, { x: 480, y: 650 })?.id, 'laundry');
+  assert.equal(facilityAt(G, { x: 520, y: 120 })?.id, 'toilets');
+  assert.equal(facilityAt(G, { x: 537, y: 1300 })?.id, 'stairs');
+  assert.equal(facilityAt(F1, { x: 537, y: 1300 })?.id, 'stairs', '樓梯兩層都有');
+  assert.equal(facilityAt(F1, { x: 100, y: 800 })?.id, 'kids');
+  assert.equal(facilityAt(G, { x: 100, y: 800 }), null, '地下冇兒童遊樂室');
 });
 
 test('相片路徑：只接受相對路徑或者 https', () => {
@@ -101,25 +111,34 @@ test('資料檢查：常見錯誤有清楚中文提示', () => {
   assert.ok(bad.errors.some(e => e.includes('位置（at）')));
 });
 
-test('設施傢俬：每層都冇撞牆、冇撞嘢、冇擋門、冇擋樓梯', () => {
+test('設施傢俬同樓梯：每層都冇撞牆、冇撞嘢、冇擋門', () => {
   const d = normalizeCenter(center, plans);
-  d.facilities.filter(f => f.id !== 'entrance' && !f.stairs).forEach(f => assert.ok(f.furniture.length > 0, `${f.name} 冇傢俬`));
+  ['coffee', 'kids', 'gym'].forEach(id => assert.ok(d.facilities.find(f => f.id === id).furniture.length > 0, `${id} 冇傢俬`));
   assert.deepEqual(allFurnitureProblems(plans, d), []);
+});
+
+test('平面圖原有傢俬：冇撞牆、冇擋門、冇疊埋', () => {
+  for (const [name, pl] of [['地下', plan], ['一樓', plan1]]) {
+    const fixed = ['door', 'door2', 'window', 'column', 'tv'];
+    const items = pl.items.filter(i => !fixed.includes(i.type));
+    const base = { ...pl, items: pl.items.filter(i => fixed.includes(i.type)) };
+    assert.deepEqual(furnitureProblems(base, [{ name, furniture: items }]), [], name);
+  }
 });
 
 test('設施傢俬：放錯位會俾檢查捉到（撞牆、擋門、擋樓梯）', () => {
   const bad = JSON.parse(JSON.stringify(center));
-  const laundry = bad.facilities.find(f => f.id === 'laundry');
-  laundry.furniture[0].dy += 60;                       // 推出外牆
-  laundry.furniture.push({ type: 'sofa', dx: -150, dy: -90 }); // 擋住儲物室門
-  bad.facilities.find(f => f.id === 'gym').furniture.push({ type: 'sofa', dx: -410, dy: 60 }); // 一樓：擋住樓梯
+  const gym = bad.facilities.find(f => f.id === 'gym');
+  gym.furniture[0].dx -= 200;                                   // 一樓：跑步機推出外牆
+  gym.furniture.push({ type: 'sofa', dx: 310, dy: -140 });      // 一樓：擋住多用途室門
+  bad.facilities.find(f => f.id === 'coffee').furniture.push({ type: 'sofa', dx: 380, dy: -280, w: 100 }); // 地下：擋住樓梯
   const probs = allFurnitureProblems(plans, normalizeCenter(bad, plans));
-  assert.ok(probs.some(p => p.startsWith('地下') && (p.includes('牆') || p.includes('外框'))), probs.join('\n'));
-  assert.ok(probs.some(p => p.includes('門口')), probs.join('\n'));
-  assert.ok(probs.some(p => p.startsWith('一樓') && p.includes('樓梯')), probs.join('\n'));
-  const wrong = normalizeCenter({ facilities: [{ id: 'a', name: 'A', at: [500, 900], furniture: [{ type: 'rocket', dx: 0, dy: 0 }] }] }, plan);
+  assert.ok(probs.some(p => p.startsWith('一樓') && (p.includes('牆') || p.includes('外框'))), probs.join('\n'));
+  assert.ok(probs.some(p => p.startsWith('一樓') && p.includes('門口')), probs.join('\n'));
+  assert.ok(probs.some(p => p.startsWith('地下') && p.includes('樓梯')), probs.join('\n'));
+  const wrong = normalizeCenter({ facilities: [{ id: 'a', name: 'A', at: [100, 900], furniture: [{ type: 'rocket', dx: 0, dy: 0 }] }] }, plan);
   assert.ok(wrong.errors.some(e => e.includes('唔認識')));
-  const badFloor = normalizeCenter({ ...center, facilities: [{ id: 'a', name: 'A', at: [500, 900], floor: '3F' }] }, plans);
+  const badFloor = normalizeCenter({ ...center, facilities: [{ id: 'a', name: 'A', at: [100, 900], floor: '3F' }] }, plans);
   assert.ok(badFloor.errors.some(e => e.includes('樓層')));
 });
 
@@ -133,12 +152,9 @@ test('設施傢俬：跟住設施位置搬', () => {
 });
 
 test('漫遊：傢俬會擋路（梳化）', () => {
-  const d = normalizeCenter(center, plans);
-  const col2 = collisionData(withFurniture(plan, d.facilities, 'G'));
-  const sofa = d.facilities.find(f => f.id === 'tv').furniture.find(it => it.type === 'sofa');
-  // 由梳化右邊向左行：要停喺梳化前面
-  const p = stepWalk({ x: 800, y: sofa.y }, { x: 600, y: sofa.y }, col2);
-  assert.ok(p.x >= sofa.x + sofa.h / 2 + WALK_R - 1, `穿過咗梳化：x = ${p.x}`);
+  const sofa = plan.items.find(i => i.type === 'sofa');
+  const p = stepWalk({ x: sofa.x, y: 990 }, { x: sofa.x, y: 700 }, col);
+  assert.ok(p.y >= sofa.y + sofa.h / 2 + WALK_R - 1, `穿過咗梳化：y = ${p.y}`);
 });
 
 // 每層嘅碰撞（連樓梯）同可以行到嘅範圍
@@ -150,7 +166,7 @@ function floorCol(id) {
   return c;
 }
 function reachable(id, from) {
-  const pl = plans[id], c = floorCol(id), G = 10, b = pl.bounds, W = Math.ceil(b.w / G) + 1, H = Math.ceil(b.h / G) + 1;
+  const pl = plans[id], c = floorCol(id), G = 5, b = pl.bounds, W = Math.ceil(b.w / G) + 1, H = Math.ceil(b.h / G) + 1;
   const free = new Uint8Array(W * H), seen = new Uint8Array(W * H);
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
     const x = b.x + i * G, y = b.y + j * G, q = resolveWalk({ x, y }, c);
@@ -167,43 +183,36 @@ function reachable(id, from) {
   }
   return (p, r) => { for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (seen[j * W + i] && Math.hypot(b.x + i * G - p.x, b.y + j * G - p.y) <= r) return true; return false; };
 }
+function triggerReachable(near, which) {
+  const t = SG[which].trigger, a = (SG.c.r * Math.PI) / 180;
+  for (let lx = t.x0; lx <= t.x1; lx += 5) for (let ly = t.y0; ly <= t.y1; ly += 5) {
+    const p = { x: SG.c.x + lx * Math.cos(a) - ly * Math.sin(a), y: SG.c.y + lx * Math.sin(a) + ly * Math.cos(a) };
+    if (near(p, 5)) return true;
+  }
+  return false;
+}
 
-test('地下：由入口行得到每個設施、每道門同樓梯口', () => {
+test('地下：由大門口行得到每個設施、洗手間、廚房同樓梯口', () => {
   const near = reachable('G', d0.start.at);
-  for (const f of facilitiesOn(d0.facilities, 'G')) assert.ok(near(f.at, f.stairs ? 200 : 150), `行唔到「${f.name}」附近`);
-  for (const [name, p] of [['玻璃房', { x: 688, y: 820 }], ['儲物室', { x: 495, y: 1345 }], ['洗衣房', { x: 581, y: 1345 }]]) assert.ok(near(p, 40), `入唔到${name}`);
-  // 樓梯口（上樓觸發區）行得到
-  const t = SG.lower.trigger, mid = { x: SG.c.x + 0, y: 0 };
-  let ok = false;
-  for (let lx = t.x0; lx <= t.x1 && !ok; lx += 10) for (let ly = t.y0; ly <= t.y1 && !ok; ly += 10) {
-    const a = (SG.c.r * Math.PI) / 180, p = { x: SG.c.x + lx * Math.cos(a) - ly * Math.sin(a), y: SG.c.y + lx * Math.sin(a) + ly * Math.cos(a) };
-    if (near(p, 5)) ok = true;
-  }
-  assert.ok(ok, '地下行唔到樓梯口');
+  for (const f of facilitiesOn(d0.facilities, 'G')) assert.ok(near(f.at, f.stairs ? 250 : 150), `行唔到「${f.name}」附近`);
+  for (const [name, p] of [['洗手間 1', { x: 275, y: 330 }], ['洗手間 2', { x: 420, y: 120 }], ['洗手間 3', { x: 568, y: 150 }], ['廚房', { x: -300, y: 420 }], ['洗衣區', { x: 450, y: 600 }]]) assert.ok(near(p, 40), `入唔到${name}`);
+  assert.ok(triggerReachable(near, 'lower'), '地下行唔到樓梯口');
 });
 
-test('一樓：由樓梯頂行得到每個設施，亦行得返落樓梯', () => {
-  const near = reachable('1F', SG.upper.arrive);
-  for (const f of facilitiesOn(d0.facilities, '1F')) assert.ok(near(f.at, f.stairs ? 200 : 150), `一樓行唔到「${f.name}」附近`);
-  const t = SG.upper.trigger;
-  let ok = false;
-  for (let lx = t.x0; lx <= t.x1 && !ok; lx += 10) for (let ly = t.y0; ly <= t.y1 && !ok; ly += 10) {
-    const a = (SG.c.r * Math.PI) / 180, p = { x: SG.c.x + lx * Math.cos(a) - ly * Math.sin(a), y: SG.c.y + lx * Math.sin(a) + ly * Math.cos(a) };
-    if (near(p, 5)) ok = true;
-  }
-  assert.ok(ok, '一樓行唔到樓梯頂');
+test('一樓：由樓梯頂行得到每個設施、洗手間同辦公室，亦行得返落樓梯', () => {
+  const near = reachable('1F', SG.lower.arrive);
+  for (const f of facilitiesOn(d0.facilities, '1F')) assert.ok(near(f.at, f.stairs ? 250 : 150), `一樓行唔到「${f.name}」附近`);
+  for (const [name, p] of [['洗手間 4', { x: 550, y: 630 }], ['洗手間 5', { x: 550, y: 770 }], ['辦公室', { x: 100, y: 400 }]]) assert.ok(near(p, 40), `一樓入唔到${name}`);
+  assert.ok(triggerReachable(near, 'upper'), '一樓行唔到樓梯頂');
 });
 
-test('樓梯：落腳點企得穩，唔會即刻觸發返轉頭；樓梯側邊行唔入去', () => {
-  for (const [which, id] of [['lower', 'G'], ['upper', '1F']]) {
-    const a = (which === 'lower' ? SG.upper : SG.lower).arrive; // 由另一層嚟到呢層嘅落腳點
-    const c = floorCol(which === 'lower' ? '1F' : 'G');
-    const q = resolveWalk({ x: a.x, y: a.y }, c);
-    assert.ok(Math.hypot(q.x - a.x, q.y - a.y) < 0.5, `${which} 落腳點撞嘢`);
-    assert.equal(SG.inTrigger(a, which === 'lower' ? 'upper' : 'lower'), false, '一到埗就會再轉層');
+test('樓梯：落腳點企得穩，唔會即刻觸發返轉頭；由側面行唔入樓梯', () => {
+  const up = SG.lower.arrive, down = SG.upper.arrive;
+  for (const [a, id, other] of [[up, '1F', 'upper'], [down, 'G', 'lower']]) {
+    const q = resolveWalk({ x: a.x, y: a.y }, floorCol(id));
+    assert.ok(Math.hypot(q.x - a.x, q.y - a.y) < 0.5, `${id} 落腳點撞嘢`);
+    assert.equal(SG.inTrigger(a, other), false, '一到埗就會再轉層');
   }
-  // 由樓梯側面（西邊）直行入去：要俾擋住，唔可以行到樓梯口觸發區
-  const c = floorCol('G');
-  const p = stepWalk({ x: 150, y: 1060 }, { x: 330, y: 1060 }, c);
-  assert.ok(p.x <= 225 - WALK_R + 1, `由側面行咗入樓梯：x = ${p.x}`);
+  const p = stepWalk({ x: 400, y: 1300 }, { x: 560, y: 1300 }, floorCol('G'));
+  assert.ok(p.x <= 475 - 4 - WALK_R + 1, `由側面行咗入樓梯：x = ${p.x}`);
 });

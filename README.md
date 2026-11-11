@@ -60,21 +60,21 @@ QR code 圖檔：[`assets/qr-code.png`](assets/qr-code.png)（印刷用）、[`a
 
 全部設施都填齊簡介同開放時間（或者預約方法），而且冇「位置暫定」之後，頂部嘅「試行版」橫額會自動消失。
 
-## 樓層同樓梯
+## 平面圖同樓梯
 
-社區客廳有兩層，喺 `center.json` 嘅 `floors` 設定，每層一張平面圖：
+兩層平面圖按**竣工平面圖（As-fitted Layout Plan，Yuen Fat，2024-06-27，1:100）**描繪：`data/plan.json`（地下）、`data/plan-1f.json`（一樓）。坐標單位 cm，x = 0 係 E 軸線，y = 0 係後牆內面，向大門口方向增加；描圖誤差大約 ±10 cm。
+
+- 所有牆、門、窗、柱同固定傢俬都寫喺 `tools/trace-floor-plan.py`。要改平面圖，改呢個檔再跑 `python3 tools/trace-floor-plan.py`，唔好直接改兩個 JSON。
+- 每個設施用 `"floor": "G"` 或者 `"1F"` 講明喺邊層；`"floor": "all"` 即係兩層都見到（樓梯）。
+- 樓梯係直樓梯，喺 `center.json` 嘅樓梯設施設定：
 
 ```json
-"floors": [
-  {"id": "G", "name": "地下", "plan": "data/plan.json"},
-  {"id": "1F", "name": "一樓", "plan": "data/plan-1f.json"}
-]
+"stairs": {"w": 125, "run": 490, "risers": 20, "r": 0, "well": 415, "topExit": "left", "bottomExit": "left"}
 ```
 
-- 每個設施用 `"floor": "1F"` 講明喺邊層；唔寫就當係第一層（地下）。`"floor": "all"` 即係每層都見到，例如樓梯。
-- 一樓平面圖（`data/plan-1f.json`）暫時用地下嘅外框同結構柱，冇內部間隔；有真實圖則就換呢個檔。
-- 樓梯係一個設施，加 `"stairs": {"r": 180}`。佢係 U 形雙跑樓梯（闊 210 × 長 316 cm，17 級），`at` 係樓梯中心，`r` 係方向（樓梯口向邊）。漫遊時行入樓梯口會自動上落樓；3D 一樓樓板會喺樓梯位置開樓梯井同加欄杆。
-- 檢查工具會逐層睇傢俬有冇撞牆、撞樓梯或者擋門。
+`w` 闊、`run` 長（cm），`risers` 級數，`r` 方向（0 = 樓梯底向大門口），`well` 一樓樓梯井長度，`topExit`／`bottomExit` 係上落之後面向邊面。漫遊時行入樓梯口會自動上落樓。
+- 層高未知，暫時當 350 cm（20 級 × 17.5 cm）。
+- 圖則上嘅地台高低（斜台、DN 2R 級）冇做出嚟，3D 入面當平地。
 
 ## 設施傢俬
 
@@ -118,17 +118,15 @@ QR code 圖檔：[`assets/qr-code.png`](assets/qr-code.png)（印刷用）、[`a
 
 尺寸係常見款式嘅大約數，唔係實物量度；有實物尺寸就填 `w`／`d`／`ht`。`npm run check`（同 GitHub 自動檢查）會提示傢俬撞牆、出咗平面圖、疊埋或者擋住門口。
 
-> 而家借用辦公室平面圖：茶水間太窄，原有茶水枱已經佔晒位，所以社區廚房只加咗雪櫃；漫遊時茶水間入面行唔入去（辦公室圖本身已經係咁）。
-
 ## 更新平面圖
 
-平面圖喺 [`data/plan.json`](data/plan.json)，格式同「新辦公室平面圖」工具嘅**備份**檔一樣。辦公室佈置改咗嘅話：
+平面圖而家按竣工圖則描繪（見上面「平面圖同樓梯」）。現場有改動（例如搬咗傢俬、加咗間隔）：
 
-1. 喺辦公室工具撳「備份」，下載 JSON 檔。
-2. 喺電腦跑：`node tools/import-office-plan.mjs 備份檔.json`（會自動刪除所有標籤，因為標籤可能有同事名）。
-3. 上載新嘅 `data/plan.json`。
+1. 改 `tools/trace-floor-plan.py` 入面對應嗰行（每行一幅牆、一道門或者一件傢俬，坐標單位 cm）。
+2. 跑 `python3 tools/trace-floor-plan.py`，會重新生成兩層嘅 JSON。
+3. 跑 `npm run check` 同 `npm test`，確認冇撞牆、冇擋門、每個設施都行得到。
 
-> ⚠️ 唔好直接將備份檔改名上載：備份檔入面有同事名（例如工作位標籤），而呢個 repo 係公開嘅。GitHub 自動檢查見到標籤會報錯。
+> 舊版用過「新辦公室平面圖」工具匯出嘅平面圖；`tools/import-office-plan.mjs` 保留，但而家已經唔用。
 
 ## 加相片
 
@@ -159,8 +157,9 @@ js/view3d.js          3D 模型、導覽、漫遊（three.js r128）
 js/plan2d.js          2D 平面圖
 js/plan-model.js      平面圖計算、碰撞、資料檢查（瀏覽器同 node 共用）
 data/center.json      ★ 中心同設施資料（日常只改呢個）
-data/plan.json        地下平面圖（由辦公室工具匯入）
-data/plan-1f.json     一樓平面圖（暫用地下外框）
+data/plan.json        地下平面圖（按竣工圖則描繪）
+data/plan-1f.json     一樓平面圖（按竣工圖則描繪）
+tools/trace-floor-plan.py  描圖坐標（改平面圖改呢度）
 photos/               設施相片
 assets/qr-code.*      QR code
 tools/                匯入平面圖、檢查資料、產生 QR code

@@ -6,26 +6,39 @@
     "address": "",
     "phone": "",
     "note": "設施資料參考《明愛牛頭角社區中心通訊》。",
-    "planNote": "平面圖暫時借用新辦公室平面圖；一樓暫用同一個外框。標咗「位置暫定」嘅位置未經確認，尺寸只供參考。"
+    "planNote": "平面圖按竣工圖則（2024 年 6 月）描繪，尺寸約有 ±10 cm 誤差，只供參考。標咗「位置暫定」嘅設施，圖則冇標明位置。"
   },
   "floors": [
     {"id": "G", "name": "地下", "plan": "data/plan.json"},
     {"id": "1F", "name": "一樓", "plan": "data/plan-1f.json"}
   ],
-  "start": {"at": [647, 175], "lookAt": [751, 289]},
+  "start": {"at": [420, 1515], "lookAt": [300, 1515]},
   "facilities": [
     {
       "id": "entrance",
       "name": "入口",
       "icon": "🚪",
-      "summary": "雙門入口，導覽由呢度開始。",
+      "summary": "地下同一樓共用嘅大門口：左手邊道門入地下，前面條樓梯上一樓。",
       "hours": "",
       "booking": "",
       "photo": "",
-      "tour": "歡迎嚟到賽馬會「聚首壹塘」社區客廳！導覽由入口開始。",
-      "at": [669, 154],
-      "area": [[464, 100], [575, 0], [752, 182], [645, 286]],
-      "view": {"from": [970, -139], "height": 600}
+      "tour": "歡迎嚟到賽馬會「聚首壹塘」社區客廳！由大門口入，左手邊道門通往地下，前面條樓梯上一樓。",
+      "floor": "G",
+      "at": [420, 1515],
+      "area": [[340, 1455], [600, 1455], [600, 1575], [340, 1575]],
+      "view": {"from": [470, 1900], "height": 520}
+    },
+    {
+      "id": "reception",
+      "name": "接待處",
+      "icon": "🛎️",
+      "summary": "喺地下前面左邊，近側門。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "floor": "G",
+      "at": [-208, 1400],
+      "radius": 120
     },
     {
       "id": "coffee",
@@ -36,44 +49,11 @@
       "booking": "",
       "photo": "",
       "tentative": true,
-      "at": [810, 390],
-      "radius": 120,
+      "floor": "G",
+      "at": [157, 1500],
+      "radius": 130,
       "furniture": [
-        {"type": "coffee_bar", "dx": 36, "dy": -54, "r": 46},
-        {"type": "bar_stool", "dx": -31, "dy": -44, "r": 46},
-        {"type": "bar_stool", "dx": 24, "dy": 13, "r": 46}
-      ]
-    },
-    {
-      "id": "kitchen",
-      "name": "社區廚房",
-      "icon": "🍳",
-      "summary": "共享備餐及煮食空間。",
-      "hours": "",
-      "booking": "",
-      "photo": "",
-      "tentative": true,
-      "at": [909, 604],
-      "area": [[1000, 440], [1080, 520], [900, 680], [900, 730], [710, 730]],
-      "furniture": [
-        {"type": "fridge", "dx": -34, "dy": 21, "r": 225}
-      ]
-    },
-    {
-      "id": "tv",
-      "name": "大電視",
-      "icon": "📺",
-      "summary": "設於共享客廳休憩區。",
-      "hours": "",
-      "booking": "",
-      "photo": "",
-      "tentative": true,
-      "at": [800, 960],
-      "area": [[630, 730], [900, 730], [900, 1292], [630, 1292]],
-      "furniture": [
-        {"type": "sofa", "dx": -120, "dy": 35, "r": 270},
-        {"type": "coffee_table", "dx": -38, "dy": 35, "r": 90, "w": 80, "d": 40},
-        {"type": "tv_cabinet", "dx": 70, "dy": 35, "r": 90}
+        {"type": "coffee_bar", "dx": 0, "dy": -95, "w": 140, "d": 55}
       ]
     },
     {
@@ -84,46 +64,9 @@
       "hours": "",
       "booking": "",
       "photo": "",
-      "tentative": true,
-      "at": [720, 1180],
-      "radius": 90,
-      "furniture": [
-        {"type": "massage_chair", "dx": -20, "dy": 40, "r": 180},
-        {"type": "massage_chair", "dx": 80, "dy": 40, "r": 180}
-      ]
-    },
-    {
-      "id": "laundry",
-      "name": "洗衣及乾衣機",
-      "icon": "🧺",
-      "summary": "自助洗衣及乾衣設備。",
-      "hours": "",
-      "booking": "",
-      "photo": "",
-      "tentative": true,
-      "at": [717, 1424],
-      "area": [[534, 1292], [900, 1292], [900, 1555], [534, 1555]],
-      "furniture": [
-        {"type": "laundry_tower", "dx": -137, "dy": 89, "r": 180},
-        {"type": "laundry_tower", "dx": -72, "dy": 89, "r": 180},
-        {"type": "laundry_tower", "dx": -7, "dy": 89, "r": 180},
-        {"type": "folding_table", "dx": 143, "dy": -44, "r": 90}
-      ]
-    },
-    {
-      "id": "stairs",
-      "name": "樓梯",
-      "icon": "🪜",
-      "summary": "上落地下同一樓。",
-      "hours": "",
-      "booking": "",
-      "photo": "",
-      "tour": "呢度係樓梯，跟住上一樓繼續睇。",
-      "tentative": true,
-      "floor": "all",
-      "at": [330, 1060],
-      "radius": 170,
-      "stairs": {"r": 180}
+      "floor": "G",
+      "at": [-295, 1170],
+      "radius": 110
     },
     {
       "id": "library",
@@ -134,20 +77,73 @@
       "booking": "",
       "photo": "",
       "tentative": true,
-      "floor": "1F",
-      "at": [130, 830],
-      "furniture": [
-        {"type": "bookshelf", "dx": -103, "dy": -175, "r": 270},
-        {"type": "bookshelf", "dx": -103, "dy": -80, "r": 270},
-        {"type": "bookshelf", "dx": -103, "dy": 15, "r": 270},
-        {"type": "bookshelf", "dx": -103, "dy": 110, "r": 270},
-        {"type": "reading_table", "dx": 10, "dy": -110},
-        {"type": "reading_table", "dx": 10, "dy": 120},
-        {"type": "chair", "dx": 10, "dy": -185, "r": 180},
-        {"type": "chair", "dx": 10, "dy": -35},
-        {"type": "chair", "dx": 10, "dy": 45, "r": 180},
-        {"type": "chair", "dx": 10, "dy": 195}
-      ]
+      "floor": "G",
+      "at": [-370, 1130],
+      "radius": 110
+    },
+    {
+      "id": "kitchen",
+      "name": "社區廚房",
+      "icon": "🍳",
+      "summary": "共享備餐及煮食空間。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tour": "社區廚房包括教學區、分享區同用餐區，有煮食爐、洗手盆同焗爐。",
+      "floor": "G",
+      "at": [-150, 450],
+      "area": [[-437, 245], [-80, 245], [-80, 0], [203, 0], [203, 548], [263, 548], [263, 795], [-437, 795]]
+    },
+    {
+      "id": "tv",
+      "name": "大電視",
+      "icon": "📺",
+      "summary": "設於共享客廳休憩區。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tour": "大電視喺社區廚房入面嘅分享區。",
+      "floor": "G",
+      "at": [150, 250],
+      "radius": 110
+    },
+    {
+      "id": "laundry",
+      "name": "洗衣及乾衣機",
+      "icon": "🧺",
+      "summary": "自助洗衣及乾衣設備。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "floor": "G",
+      "at": [450, 600],
+      "area": [[347, 250], [600, 250], [600, 800], [263, 800], [263, 548], [355, 548], [355, 415], [347, 415]]
+    },
+    {
+      "id": "toilets",
+      "name": "洗手間",
+      "icon": "🚻",
+      "summary": "地下有 3 個洗手間，其中一個有嬰兒換片枱；一樓另有 2 個。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "floor": "G",
+      "at": [430, 140],
+      "area": [[203, 160], [347, 160], [347, 0], [600, 0], [600, 250], [347, 250], [347, 415], [203, 415]]
+    },
+    {
+      "id": "stairs",
+      "name": "樓梯",
+      "icon": "🪜",
+      "summary": "由大門口直上一樓，共 20 級。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tour": "呢度係樓梯，由大門口直上一樓，跟住上去睇。",
+      "floor": "all",
+      "at": [537.5, 1210],
+      "radius": 150,
+      "stairs": {"w": 125, "run": 490, "risers": 20, "r": 0, "well": 415, "topExit": "left", "bottomExit": "left"}
     },
     {
       "id": "kids",
@@ -157,17 +153,16 @@
       "hours": "",
       "booking": "",
       "photo": "",
-      "tentative": true,
       "floor": "1F",
-      "at": [290, 1430],
-      "area": [[0, 1292], [534, 1292], [534, 1555], [0, 1555]],
+      "at": [160, 810],
+      "area": [[-45, 590], [360, 590], [360, 1030], [-45, 1030]],
       "furniture": [
-        {"type": "play_mat", "dx": 50, "dy": -40},
-        {"type": "toy_shelf", "dx": -263, "dy": -40, "r": 270},
-        {"type": "kids_table", "dx": -155, "dy": -80},
-        {"type": "kids_stool", "dx": -215, "dy": -80},
-        {"type": "kids_stool", "dx": -95, "dy": -80},
-        {"type": "kids_stool", "dx": -155, "dy": -20}
+        {"type": "play_mat", "dx": -10, "dy": 0},
+        {"type": "toy_shelf", "dx": -10, "dy": -194},
+        {"type": "kids_table", "dx": -85, "dy": 145},
+        {"type": "kids_stool", "dx": -145, "dy": 145},
+        {"type": "kids_stool", "dx": -25, "dy": 145},
+        {"type": "kids_stool", "dx": -85, "dy": 198}
       ]
     },
     {
@@ -178,15 +173,15 @@
       "hours": "",
       "booking": "",
       "photo": "",
+      "tour": "健身設備暫定擺喺一樓多用途室。",
       "tentative": true,
       "floor": "1F",
-      "at": [740, 1000],
+      "at": [110, 1200],
+      "radius": 150,
       "furniture": [
-        {"type": "treadmill", "dx": -90, "dy": -100},
-        {"type": "treadmill", "dx": 20, "dy": -100},
-        {"type": "exercise_bike", "dx": 120, "dy": -120},
-        {"type": "exercise_bike", "dx": 120, "dy": 10},
-        {"type": "gym_mat", "dx": -40, "dy": 80}
+        {"type": "treadmill", "dx": -70, "dy": -50},
+        {"type": "exercise_bike", "dx": 30, "dy": -100},
+        {"type": "gym_mat", "dx": 320, "dy": 50, "r": 90}
       ]
     }
   ]

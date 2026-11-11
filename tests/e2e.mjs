@@ -118,21 +118,19 @@ await check('2. 每個設施都撳得到，資料卡有名稱、簡介、時間�
 await check('2b. 撳 3D 模型本身（唔係標記）都揀到設施', async () => {
   await page.click('[data-tab="3d"]');
   await sleep(500);
-  // 撳休憩區（玻璃房）入面嘅地板，唔係標記本身。
-  // 喺休憩區入面搵一點：離牆同按摩椅有啲距離，而且冇標記遮住。
+  // 撳社區廚房（Pantry）入面嘅地板，唔係標記本身：離大電視嘅點遠啲，而且冇標記遮住。
   const pt = await page.evaluate(() => {
     const v = window.__clr.S.view, r = document.querySelector('#v3-canvas canvas').getBoundingClientRect();
-    for (let y = 790; y <= 1230; y += 20) for (let x = 680; x <= 850; x += 20) {
-      if (Math.hypot(x - 720, y - 1180) < 130) continue;
+    for (let y = 340; y <= 480; y += 20) for (let x = -320; x <= -40; x += 20) {
       const p = v.screenOf(x, y), sx = r.left + p.x, sy = r.top + p.y;
       if (document.elementFromPoint(sx, sy)?.tagName === 'CANVAS') return { x: sx, y: sy };
     }
     return null;
   });
-  assert.ok(pt, '休憩區全部俾標記遮住，搵唔到位置試撳');
+  assert.ok(pt, '社區廚房全部俾標記遮住，搵唔到位置試撳');
   await page.mouse.click(pt.x, pt.y);
   await page.waitForSelector('#card:not([hidden])', { timeout: 3000 });
-  assert.ok((await page.textContent('#card-title')).includes('大電視'));
+  assert.ok((await page.textContent('#card-title')).includes('社區廚房'));
   await page.click('#card .close-btn');
 });
 
@@ -185,25 +183,25 @@ await check('4. 漫遊：手機掣行得，唔會穿牆', async () => {
   const moved = await holdUntil(page, { button: '[data-wk="f"]' }, () => { const a = window.__clr.s0, b = window.__clr.S.view.walkState(); return Math.hypot(b.x - a.x, b.y - a.y) > 50; });
   assert.ok(moved, '撳住向前掣行唔郁');
   await page.screenshot({ path: join(OUT, '05-walk-phone.png') });
-  // 對住儲物室間隔牆（y = 1292）一直行 5 秒：唔可以穿過去。yaw = π 即係向 +y 行。
-  await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(150, 1150); v.setYaw(Math.PI); });
+  // 對住前面外牆（y = 1575，有窗）一直行：唔可以穿過去。yaw = π 即係向 +y（前面）行。
+  await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(-350, 1420); v.setYaw(Math.PI); });
   // 一直向牆行，直到停低（連續幾次位置唔變）或者穿咗牆
-  await holdUntil(page, { button: '[data-wk="f"]' }, () => { const c = window.__clr, y = c.S.view.walkState().y; const same = c.lastY != null && Math.abs(y - c.lastY) < 0.5; c.lastY = y; c.same = same ? (c.same || 0) + 1 : 0; return y > 1292 || c.same >= 4; }, 25000);
+  await holdUntil(page, { button: '[data-wk="f"]' }, () => { const c = window.__clr, y = c.S.view.walkState().y; const same = c.lastY != null && Math.abs(y - c.lastY) < 0.5; c.lastY = y; c.same = same ? (c.same || 0) + 1 : 0; return y > 1575 || c.same >= 4; }, 25000);
   const s2 = await page.evaluate(() => window.__clr.S.view.walkState());
-  assert.ok(s2.y < 1292 - 22, `穿咗牆：y = ${s2.y.toFixed(1)}（牆喺 y = 1292）`);
+  assert.ok(s2.y < 1575 - 22, `穿咗牆：y = ${s2.y.toFixed(1)}（牆喺 y = 1575）`);
 });
 await check('4b. 漫遊：入門口行得過（門唔會擋死）', async () => {
-  // 由主區行入玻璃房：門喺 x 650–725、y 730（房門），房喺 y > 730。
-  await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(688, 690); v.setYaw(Math.PI); });
-  await holdUntil(page, { button: '[data-wk="f"]' }, () => window.__clr.S.view.walkState().y > 760);
+  // 由大門口（Foyer）向西行，經 DR-05 入地下 Drop-in 區：門喺 x = 340，y 1465–1545。yaw = π/2 即係向西。
+  await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(420, 1505); v.setYaw(Math.PI / 2); });
+  await holdUntil(page, { button: '[data-wk="f"]' }, () => window.__clr.S.view.walkState().x < 320);
   const s2 = await page.evaluate(() => window.__clr.S.view.walkState());
-  assert.ok(s2.y > 760, `行唔入玻璃房：y = ${s2.y.toFixed(1)}`);
+  assert.ok(s2.x < 320, `行唔入地下：x = ${s2.x.toFixed(1)}`);
   await page.screenshot({ path: join(OUT, '06-walk-door.png') });
 });
 
 await check('4d. 漫遊：行入樓梯口上一樓，再行返落地下', async () => {
-  // 地下樓梯口喺樓梯北面東邊：企喺佢前面，面向南（樓梯）
-  await page.evaluate(() => { const v = window.__clr.S.view; v.walkHome(); v.walkTo(385, 850); v.setYaw(Math.PI); });
+  // 樓梯喺大門口正前面：由大門口向北（yaw = 0）行上樓梯
+  await page.evaluate(() => { const v = window.__clr.S.view; v.walkHome(); v.walkTo(537, 1505); v.setYaw(0); });
   await holdUntil(page, { button: '[data-wk="f"]' }, () => window.__clr.S.view.walkState().floor === '1F');
   let st = await page.evaluate(() => window.__clr.S.view.walkState());
   assert.equal(st.floor, '1F', `行入樓梯口冇上到一樓（而家 ${st.floor}，位置 ${st.x.toFixed(0)},${st.y.toFixed(0)}）`);
@@ -211,7 +209,8 @@ await check('4d. 漫遊：行入樓梯口上一樓，再行返落地下', async 
   await sleep(1200);
   await page.screenshot({ path: join(OUT, '06b-walk-1f.png') });
   // 一樓：轉身行返落樓梯
-  await page.evaluate(() => window.__clr.S.view.setYaw(Math.PI));
+  // 企返一樓樓梯平台（上嚟之後㩒住掣可能已經行咗出走廊），轉身向南行落樓梯
+  await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(537, 915); v.setYaw(Math.PI); });
   await holdUntil(page, { button: '[data-wk="f"]' }, () => window.__clr.S.view.walkState().floor === 'G');
   st = await page.evaluate(() => window.__clr.S.view.walkState());
   assert.equal(st.floor, 'G', `一樓行返落樓梯失敗（而家 ${st.floor}）`);
@@ -234,9 +233,9 @@ await check('5. 2D 平面圖同 3D 位置一致', async () => {
   await page.click('[data-tab="plan"]');
   await page.waitForSelector('.plan-floor:not([hidden]) .ppin');
   const same = await page.evaluate(() => {
-    const { data, plan } = window.__clr;
-    const b = plan.bounds, pad = 60, vw = b.w + pad * 2, vh = b.h + pad * 2;
+    const { data, plans, S } = window.__clr;
     return data.facilities.every(f => {
+      const b = plans[f.floor === 'all' ? S.plan2d.floor : f.floor].bounds, pad = 60, vw = b.w + pad * 2, vh = b.h + pad * 2;
       const p = window.__clr.plan2d.pinPercent(f.id);
       return Math.abs(p.x - (f.at.x - b.x + pad) / vw * 100) < 1e-9 && Math.abs(p.y - (f.at.y - b.y + pad) / vh * 100) < 1e-9;
     });
@@ -289,11 +288,11 @@ await ctx.close();
     const s1 = await page.evaluate(() => window.__clr.S.view.walkState());
     await page.evaluate(() => { window.__clr.y0 = window.__clr.S.view.walkState().yaw; });
     assert.ok(await holdUntil(page, { key: 'ArrowLeft' }, () => Math.abs(window.__clr.S.view.walkState().yaw - window.__clr.y0) > 0.3), '方向鍵轉唔到身');
-    // 撞左邊外牆（x = 0）
-    await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(120, 900); v.setYaw(Math.PI / 2); window.__clr.lastX = null; });
-    await holdUntil(page, { key: 'w' }, () => { const c = window.__clr, x = c.S.view.walkState().x; const same = c.lastX != null && Math.abs(x - c.lastX) < 0.5; c.lastX = x; c.sx = same ? (c.sx || 0) + 1 : 0; return x < 0 || c.sx >= 4; }, 25000);
+    // 向西行去左邊外牆（x = -437，前面有書架）
+    await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(-200, 1050); v.setYaw(Math.PI / 2); window.__clr.lastX = null; });
+    await holdUntil(page, { key: 'w' }, () => { const c = window.__clr, x = c.S.view.walkState().x; const same = c.lastX != null && Math.abs(x - c.lastX) < 0.5; c.lastX = x; c.sx = same ? (c.sx || 0) + 1 : 0; return x < -437 || c.sx >= 4; }, 25000);
     const s3 = await page.evaluate(() => window.__clr.S.view.walkState());
-    assert.ok(s3.x > 7.5 + 20, `穿咗外牆：x = ${s3.x.toFixed(1)}`);
+    assert.ok(s3.x > -437 + 7.5 + 20, `穿咗外牆：x = ${s3.x.toFixed(1)}`);
     await page.screenshot({ path: join(OUT, '09-walk-desktop.png') });
   });
   await check('3D 全景（電腦）', async () => {

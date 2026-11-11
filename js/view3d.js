@@ -1,6 +1,6 @@
 // 3D 模型：做法同「新辦公室平面圖」工具一樣（three.js r128 + OrbitControls，由 jsdelivr 載入）。
 import {
-  WALL_H, LOW_H, EYE_H, FLOOR_H, STAIR, CATALOG, rad, baseSegments, openingsOf, holesOn, solidSpans, toWorldFrom,
+  WALL_H, LOW_H, EYE_H, FLOOR_H, CATALOG, rad, baseSegments, openingsOf, holesOn, solidSpans, toWorldFrom,
   collisionData, resolveWalk, stepWalk, lineBlocked, elev, baseDims, corners, dwellSeconds, facilityAt, insideBuilding,
   facilitiesOn, stairsGeometry,
 } from './plan-model.js';
@@ -399,29 +399,28 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
   }
   // 樓梯本地座標 → 3D 群組（x 同 y 對應 3D 嘅 x 同 z）
   const stairGroup = () => { const g = new T.Group(); g.position.set(SG.c.x, 0, SG.c.y); g.rotation.y = -rad(SG.c.r); return g; };
-  // U 形樓梯：第一跑（左）上到平台，第二跑（右）返轉頭上到上層
+  // 直樓梯：一級級由下層上到上層，底下係斜嘅鋸齒形
   function buildStairs() {
-    const g = stairGroup(), rise = FLOOR_H / STAIR.risers, t = STAIR.tread, hw = SG.hw, hd = SG.hd, fw = STAIR.flight, gx = STAIR.gap / 2;
-    const n1 = STAIR.firstRisers - 1, n2 = STAIR.risers - STAIR.firstRisers - 1, land = STAIR.firstRisers * rise;
-    for (let i = 1; i <= n1; i++) box3(g, fw, i * rise, t, -gx - fw / 2, 0, hd - t * (i - 0.5), 'stair');
-    box3(g, STAIR.w, land, 100, 0, 0, -hd + 50, 'stair');                                    // 轉角平台
-    for (let j = 1; j <= n2; j++) box3(g, fw, land + j * rise, t, gx + fw / 2, 0, -hd + 100 + t * (j - 0.5), 'stair');
-    box3(g, STAIR.gap, FLOOR_H, hd - (-hd + 100), 0, 0, (hd + (-hd + 100)) / 2, 'wall');      // 中間牆
+    const g = stairGroup(), n = SG.risers, rise = FLOOR_H / n, t = SG.run / (n - 1), hw = SG.hw, hd = SG.hd;
+    for (let i = 1; i < n; i++) {
+      const top = i * rise, y0 = Math.max(0, top - 45);
+      box3(g, SG.hw * 2, top - y0, t, 0, y0, hd - t * (i - 0.5), 'stair', i % 2 === 0);
+    }
     g.userData.stairs = true; scene.add(g);
     return g;
   }
-  // 上層樓梯井四邊欄杆（樓梯頂嗰邊留空俾人上落）
+  // 上層樓梯井三邊欄杆（樓梯頂嗰邊留空俾人上落）
   function stairRailing() {
-    const g = stairGroup(), hw = SG.hw, hd = SG.hd, top = SG.topY, gx = STAIR.gap / 2;
-    g.position.y = 0;
+    const g = stairGroup(), hw = SG.hw, hd = SG.hd, far = -hd + SG.well;
     const rail = (x0, z0, x1, z1) => {
       const L = Math.hypot(x1 - x0, z1 - z0), mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, horiz = Math.abs(z1 - z0) < 1;
       box3(g, horiz ? L : 3, 92, horiz ? 3 : L, mx, 0, mz, 'glass', false);
       box3(g, horiz ? L + 4 : 5, 5, horiz ? 5 : L + 4, mx, 92, mz, 'steel', false);
     };
-    rail(-hw, -hd, hw, -hd); rail(hw, -hd, hw, top); rail(-hw, -hd, -hw, top); rail(-hw, top, gx, top);
+    rail(-hw, -hd, -hw, far); rail(hw, -hd, hw, far); rail(-hw, far, hw, far);
     return g;
   }
+
   const ground = new T.Mesh(new T.CircleGeometry(size * 3, 48), mat('ground'));
   ground.rotation.x = -Math.PI / 2; ground.position.set(cx, -1, cz); ground.receiveShadow = true; ground.userData.ground = true;
   scene.add(ground);

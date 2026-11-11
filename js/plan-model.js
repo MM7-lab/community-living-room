@@ -5,9 +5,10 @@ export const WALL_H = 270;   // 牆高（同辦公室工具一樣）
 export const LOW_H = 110;    // 「矮牆」模式，方便由上面望入去
 export const WALK_R = 22;    // 漫遊時人嘅半徑（cm）
 export const EYE_H = 155;    // 漫遊時眼睛高度（cm）
-export const FLOOR_H = 300;  // 層與層之間（天花 270 + 樓板 30）
-// U 形雙跑樓梯（樓梯本地座標：闊沿 x，長沿 y；樓梯口喺 +y 嗰邊）
-export const STAIR = { w: 210, d: 316, flight: 100, gap: 10, risers: 17, firstRisers: 9, tread: 27 };
+export const FLOOR_H = 350;  // 層與層之間（大約：20 級 × 17.5 cm；天花 270，其餘係樓板同天花內）
+// 直樓梯預設值（樓梯本地座標：闊沿 x，長沿 y；+y 係樓梯底，-y 係樓梯頂）
+export const STAIR = { w: 120, run: 480, risers: 20, well: 400 };
+const HEADROOM = 230; // 樓梯底下淨高少過呢個數就當行唔到（cm）
 
 // 傢俬類型：同辦公室工具嘅清單一致（w 闊、d 深、ht 高，單位 cm）。
 export const CATALOG = {
@@ -62,7 +63,7 @@ export const CATALOG = {
   kids_stool: { w: 30, d: 30, ht: 30, sym: 'stool', name: '兒童凳' },
   laundry_tower: { w: 60, d: 65, ht: 172, sym: 'laundry', name: '洗衣機＋乾衣機（上下疊）' },
   folding_table: { w: 120, d: 60, ht: 80, sym: 'table', name: '摺衫枱' },
-  stairs: { w: 210, d: 316, ht: 300, sym: 'stairs', name: '樓梯', internal: true }, // 由設施 "stairs" 自動產生
+  stairs: { w: 120, d: 480, ht: 350, sym: 'stairs', name: '樓梯', internal: true }, // 由設施 "stairs" 自動產生
 };
 export const FURNITURE_TYPES = Object.keys(CATALOG).filter(k => CATALOG[k].name && !CATALOG[k].internal);
 const OPENING_TYPES = new Set(['door', 'door2', 'window']);
@@ -272,7 +273,7 @@ export function lineBlocked(p, q, col) {
 }
 
 /* ---------- 中心同設施資料 ---------- */
-const PALETTE = ['#E07A3F', '#D9A23A', '#6FA36F', '#4F94B8', '#B7739B', '#C8694F', '#8C7BC0', '#3E9C8F', '#A0784F', '#5C86C9'];
+const PALETTE = ['#E07A3F', '#D9A23A', '#6FA36F', '#4F94B8', '#B7739B', '#C8694F', '#8C7BC0', '#3E9C8F', '#A0784F', '#5C86C9', '#D46A8C', '#7A9A3A', '#C0883A', '#4C7F99'];
 const str = (v, max = 400) => typeof v === 'string' ? v.trim().slice(0, max) : (v == null ? '' : String(v).trim().slice(0, max));
 function xy(v) {
   if (Array.isArray(v) && v.length >= 2 && isNum(v[0]) && isNum(v[1])) return { x: +v[0], y: +v[1] };
@@ -341,7 +342,11 @@ export function normalizeCenter(raw, plans) {
     let stairs = null;
     if (f.stairs != null) {
       if (floors.length < 2) errors.push(`${label}係樓梯，但係 floors 得一層。`);
-      else stairs = { r: isNum(f.stairs.r) ? +f.stairs.r : 0, lower: floors[0].id, upper: floors[1].id };
+      else {
+        const st = f.stairs, num = (v, d) => (isNum(v) && +v > 0 ? +v : d), ex = v => (['ahead', 'left', 'right'].includes(v) ? v : 'ahead');
+        stairs = { r: isNum(st.r) ? +st.r : 0, w: num(st.w, STAIR.w), run: num(st.run, STAIR.run), risers: Math.round(num(st.risers, STAIR.risers)), lower: floors[0].id, upper: floors[1].id, topExit: ex(st.topExit), bottomExit: ex(st.bottomExit) };
+        stairs.well = Math.min(stairs.run, num(st.well, stairs.run));
+      }
     }
     let area = null;
     if (f.area != null) {
@@ -388,23 +393,28 @@ export function normalizeCenter(raw, plans) {
 export const facilitiesOn = (facilities, floorId) => facilities.filter(f => f.floor === floorId || f.floor === 'all');
 
 /* ---------- 樓梯 ---------- */
-// U 形樓梯：第一跑喺左邊（本地 x < 0）由樓梯口向 -y 上，平台喺盡頭，第二跑喺右邊向 +y 上到上層。
+// 直樓梯：由下層嘅樓梯底（本地 +y）一直上到上層樓梯頂（本地 -y）。
+// center.json："stairs": {"w": 闊, "run": 長, "risers": 級數, "r": 方向, "well": 上層樓梯井長度, "topExit"/"bottomExit": "ahead"|"left"|"right"}
 export function stairsGeometry(f) {
   const s = f.stairs; if (!s) return null;
-  const c = { x: f.at.x, y: f.at.y, r: s.r }, hw = STAIR.w / 2, hd = STAIR.d / 2;
+  const c = { x: f.at.x, y: f.at.y, r: s.r }, hw = s.w / 2, hd = s.run / 2;
   const rect = (x0, y0, x1, y1) => { const m = toWorldFrom(c, (x0 + x1) / 2, (y0 + y1) / 2); return { x: m.x, y: m.y, w: x1 - x0, h: y1 - y0, r: c.r }; };
   const poly = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => toWorldFrom(c, x, y));
-  const topY = -hd + 100 + (STAIR.risers - STAIR.firstRisers - 1) * STAIR.tread; // 第二跑到頂嘅位置（本地 y）：7 級踏步之後就係上層
   const toLocal = p => { const a = rad(c.r), dx = p.x - c.x, dy = p.y - c.y; return { x: dx * Math.cos(a) + dy * Math.sin(a), y: -dx * Math.sin(a) + dy * Math.cos(a) }; };
-  const pose = (lx, ly) => { const p = toWorldFrom(c, lx, ly), q = toWorldFrom(c, lx, ly + 100); return { x: p.x, y: p.y, yaw: Math.atan2(-(q.x - p.x), -(q.y - p.y)) }; };
+  const DIR = { ahead: null, left: [-1, 0], right: [1, 0] };
+  const pose = (lx, ly, ahead, exit) => {
+    const d = DIR[exit] || ahead, p = toWorldFrom(c, lx, ly), q = toWorldFrom(c, lx + d[0] * 100, ly + d[1] * 100);
+    return { x: p.x, y: p.y, yaw: Math.atan2(-(q.x - p.x), -(q.y - p.y)) };
+  };
+  // 下層：樓梯底下淨高唔夠嘅位置擋路，樓梯口（最底兩級）留空俾人行入去
+  const lowFrom = Math.max(-hd, hd - s.run * (HEADROOM / FLOOR_H));
   return {
-    c, hw, hd, topY,
+    c, hw, hd, run: s.run, risers: s.risers, well: s.well,
     footprint: poly(-hw, -hd, hw, hd),
-    // 下層：成個樓梯都擋路，除咗左邊樓梯口
-    lower: { floor: s.lower, to: s.upper, colliders: [rect(-hw, -hd, hw, hd - 63), rect(-STAIR.gap / 2, hd - 63, hw, hd)], trigger: { x0: -hw + 5, x1: -STAIR.gap / 2 - 5, y0: hd - 63, y1: hd - 8 }, arrive: pose(-hw / 2 - 2, hd + 45) },
-    // 上層：樓梯井有欄杆，淨係右邊樓梯頂可以落
-    upper: { floor: s.upper, to: s.lower, colliders: [rect(-hw, -hd, STAIR.gap / 2, topY), rect(STAIR.gap / 2, -hd, hw, hd - 63)], trigger: { x0: STAIR.gap / 2 + 5, x1: hw - 5, y0: hd - 63, y1: hd - 8 }, arrive: pose(hw / 2 + 2, hd + 45) },
-    hole: poly(-hw, -hd, hw, topY),
+    lower: { floor: s.lower, to: s.upper, colliders: [rect(-hw, lowFrom, hw, hd - 60)], trigger: { x0: -hw + 6, x1: hw - 6, y0: hd - 58, y1: hd - 6 }, arrive: pose(0, -hd - 50, [0, -1], s.topExit) },
+    // 上層：樓梯井擋路，淨係樓梯頂可以落
+    upper: { floor: s.upper, to: s.lower, colliders: [rect(-hw, -hd + 50, hw, -hd + s.well)], trigger: { x0: -hw + 6, x1: hw - 6, y0: -hd + 6, y1: -hd + 48 }, arrive: pose(0, hd + 50, [0, 1], s.bottomExit) },
+    hole: poly(-hw, -hd, hw, -hd + s.well),
     inTrigger(p, which) { const q = toLocal(p), t = this[which].trigger; return q.x >= t.x0 && q.x <= t.x1 && q.y >= t.y0 && q.y <= t.y1; },
   };
 }
@@ -448,18 +458,39 @@ export function furnitureProblems(plan, facilities, obstacles = []) {
 
 // 樓梯當一件傢俬咁檢查（撞牆、撞嘢、擋門）
 export function stairsItem(f) {
-  return { id: `${f.id}~stairs`, type: 'stairs', fid: f.id, x: f.at.x, y: f.at.y, w: STAIR.w, h: STAIR.d, ht: FLOOR_H, r: f.stairs.r };
+  return { id: `${f.id}~stairs`, type: 'stairs', fid: f.id, x: f.at.x, y: f.at.y, w: f.stairs.w, h: f.stairs.run, ht: FLOOR_H, r: f.stairs.r };
 }
 // 逐層檢查設施傢俬同樓梯，回傳「地下：……」咁嘅提示
 export function allFurnitureProblems(plans, data) {
-  const out = [];
-  const stairs = data.facilities.filter(f => f.stairs).map(f => ({ name: f.name, furniture: [stairsItem(f)] }));
+  const out = [], multi = data.floors.length > 1;
+  const sfs = data.facilities.filter(f => f.stairs);
   data.floors.forEach(fl => {
     const plan = plans[fl.id]; if (!plan) return;
-    furnitureProblems(plan, data.facilities.filter(f => f.floor === fl.id).concat(stairs))
-      .forEach(m => out.push(data.floors.length > 1 ? `${fl.name}：${m}` : m));
+    const pre = multi ? `${fl.name}：` : '';
+    // 樓梯喺呢層佔嘅位置：下層係成條樓梯，上層係樓梯井（樓梯本身夾喺牆中間係正常，唔當撞牆）
+    const obs = sfs.map(f => {
+      const sg = stairsGeometry(f); if (!sg) return null;
+      const lower = sg.lower.floor === fl.id, upper = sg.upper.floor === fl.id;
+      if (!lower && !upper) return null;
+      const len = lower ? sg.run : sg.well, m = toWorldFrom(sg.c, 0, -sg.hd + len / 2);
+      return { label: f.name, x: m.x, y: m.y, w: sg.hw * 2 - 6, h: len - 6, r: sg.c.r };
+    }).filter(Boolean);
+    furnitureProblems(plan, data.facilities.filter(f => f.floor === fl.id), obs).forEach(m => out.push(pre + m));
+    obs.forEach(o => plan.items.forEach(it => {
+      if (it.type === 'window' || it.type === 'tv') return;
+      if (rectsOverlap(o, it)) out.push(`${pre}${o.label}同原有${it.type === 'door' || it.type === 'door2' ? '門' : '傢俬'}（${it.id}）重疊。`);
+    }));
   });
   return out;
+}
+function rectsOverlap(A, B) {
+  const axes = it => { const a = rad(it.r || 0); return [[Math.cos(a), Math.sin(a)], [-Math.sin(a), Math.cos(a)]]; };
+  const ca = corners(A), cb = corners(B);
+  for (const ax of [...axes(A), ...axes(B)]) {
+    const pa = ca.map(c => c.x * ax[0] + c.y * ax[1]), pb = cb.map(c => c.x * ax[0] + c.y * ax[1]);
+    if (Math.max(...pa) <= Math.min(...pb) + 1 || Math.max(...pb) <= Math.min(...pa) + 1) return false;
+  }
+  return true;
 }
 
 // 設施嘅導覽時間：按字數計，長者睇字慢啲，所以寬鬆啲。

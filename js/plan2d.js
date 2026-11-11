@@ -1,5 +1,5 @@
 // 2D 平面圖：同 3D 用同一份 plan.json 同設施座標，所以位置一定一致。
-import { CATALOG, STAIR, baseSegments, openingsOf, holesOn, solidSpans } from './plan-model.js';
+import { CATALOG, baseSegments, openingsOf, holesOn, solidSpans } from './plan-model.js';
 
 const r2 = n => Math.round(n * 10) / 10;
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -48,19 +48,17 @@ function symbol(sym, w, h, type = '') {
   }
 }
 
-// 樓梯（平面圖由上面望落去）：級數線、轉角平台、中間牆、上樓方向箭咀
+// 樓梯（平面圖由上面望落去）：級數線、上樓方向箭咀；上層畫樓梯井欄杆
 function stairsSvg(sg, role) {
   if (!sg) return '';
-  const { hw, hd, topY } = sg, t = STAIR.tread, gx = STAIR.gap / 2, n1 = STAIR.firstRisers - 1, n2 = STAIR.risers - STAIR.firstRisers - 1;
+  const { hw, hd } = sg, n = sg.risers, t = sg.run / (n - 1), far = -hd + sg.well;
+  // 上層只見到樓梯井嗰段（其餘喺上層地板底下）
+  const end = role === 'upper' ? far : hd;
   let h = `<g class="p-stairs${role === 'upper' ? ' upper' : ''}" transform="translate(${r2(sg.c.x)} ${r2(sg.c.y)}) rotate(${sg.c.r})">`;
-  h += `<rect class="st-bg" x="${-hw}" y="${-hd}" width="${2 * hw}" height="${2 * hd}"/>`;
-  h += `<rect class="st-land" x="${-hw}" y="${-hd}" width="${2 * hw}" height="100"/>`;
-  for (let i = 1; i <= n1; i++) h += `<line class="st-tread" x1="${-hw}" y1="${hd - t * i}" x2="${-gx}" y2="${hd - t * i}"/>`;
-  for (let j = 1; j <= n2; j++) h += `<line class="st-tread" x1="${gx}" y1="${-hd + 100 + t * j}" x2="${hw}" y2="${-hd + 100 + t * j}"/>`;
-  h += `<rect class="st-spine" x="${-gx}" y="${-hd + 100}" width="${2 * gx}" height="${2 * hd - 100}"/>`;
-  h += `<path class="st-arrow" d="M ${-hw / 2} ${hd - 10} V ${-hd + 50} H ${hw / 2} V ${hd - 22}"/>`;
-  h += `<path class="st-head" d="M ${hw / 2 - 12} ${hd - 34} L ${hw / 2} ${hd - 12} L ${hw / 2 + 12} ${hd - 34} Z"/>`;
-  if (role === 'upper') h += `<path class="st-rail" d="M ${gx} ${topY} H ${-hw} V ${-hd} H ${hw} V ${topY}"/>`; // 上層樓梯井欄杆
+  h += `<rect class="st-bg" x="${-hw}" y="${-hd}" width="${2 * hw}" height="${r2(end + hd)}"/>`;
+  for (let i = 1; i < n; i++) { const y = hd - t * i; if (y < end) h += `<line class="st-tread" x1="${-hw}" y1="${r2(y)}" x2="${hw}" y2="${r2(y)}"/>`; }
+  h += `<path class="st-arrow" d="M 0 ${r2(end - 12)} V ${-hd + 26}"/><path class="st-head" d="M -14 ${-hd + 34} L 0 ${-hd + 8} L 14 ${-hd + 34} Z"/>`;
+  if (role === 'upper') h += `<path class="st-rail" d="M ${-hw} ${-hd} V ${r2(far)} H ${hw} V ${-hd}"/>`;
   return h + '</g>';
 }
 
