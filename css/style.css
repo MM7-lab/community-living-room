@@ -37,8 +37,6 @@ h1, h2, h3, p { margin: 0; }
   background: #FBE9D3; border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; margin-right: auto; }
-.logo { flex: none; width: 42px; height: 42px; border-radius: 14px; background: var(--primary); color: #fff; display: grid; place-items: center; }
-.logo svg { width: 26px; height: 26px; }
 .brand-text { min-width: 0; }
 .brand h1 { font-size: 21px; line-height: 1.25; font-weight: 800; letter-spacing: .01em; text-wrap: balance; word-break: keep-all; overflow-wrap: anywhere; }
 .brand p { font-size: 15px; color: var(--muted); line-height: 1.3; }
@@ -349,3 +347,8 @@ h1, h2, h3, p { margin: 0; }
 .floor-flash.go { animation: floorflash 1.1s ease-out; }
 @keyframes floorflash { 0% { opacity: .95; } 55% { opacity: .85; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .floor-flash.go { animation-duration: .01s; } }
+
+.f-rug, .f-tunnel, .f-kiosk { vector-effect: non-scaling-stroke; }
+.f-rug { fill: #EFD9B4; stroke: #C9A877; stroke-width: 1.2; }
+.f-tunnel { fill: #A9D1EC; stroke: #5B8FC9; stroke-width: 1.4; }
+.f-kiosk { fill: #C5BCEB; stroke: #7E70C2; stroke-width: 1.2; }

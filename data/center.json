@@ -6,39 +6,73 @@
     "address": "",
     "phone": "",
     "note": "設施資料參考《明愛牛頭角社區中心通訊》。",
-    "planNote": "平面圖按竣工圖則（2024 年 6 月）描繪，尺寸約有 ±10 cm 誤差，只供參考。標咗「位置暫定」嘅設施，圖則冇標明位置。"
+    "planNote": "平面圖按竣工圖則（2024 年 6 月）同新設計圖（2026 年 8 月，地下廚房外面）描繪，尺寸約有 ±20 cm 誤差，只供參考。標咗「位置暫定」嘅設施，圖則冇標明位置。"
   },
   "floors": [
     {"id": "G", "name": "地下", "plan": "data/plan.json"},
     {"id": "1F", "name": "一樓", "plan": "data/plan-1f.json"}
   ],
-  "start": {"at": [420, 1515], "lookAt": [300, 1515]},
+  "start": {"at": [400, 1525], "lookAt": [400, 1380]},
   "facilities": [
     {
       "id": "entrance",
       "name": "大門口",
       "icon": "🚪",
-      "summary": "地下同一樓共用嘅大門口：左手邊道門入地下，前面條樓梯上一樓。",
+      "summary": "地下同一樓共用嘅大門口：前面道門入地下，右手邊條樓梯上一樓。",
       "hours": "",
       "booking": "",
       "photo": "",
-      "tour": "歡迎嚟到賽馬會「聚首壹塘」社區客廳！由大門口入，左手邊道門通往地下，前面條樓梯上一樓。接待處旁邊仲有一道側門。",
+      "tour": "歡迎嚟到賽馬會「聚首壹塘」社區客廳！由大門口入，前面道門通往地下，右手邊條樓梯上一樓。接待處旁邊仲有一道側門。",
       "floor": "G",
-      "at": [420, 1515],
-      "area": [[340, 1455], [600, 1455], [600, 1575], [340, 1575]],
-      "view": {"from": [470, 1900], "height": 520}
+      "at": [400, 1515],
+      "area": [[298, 1455], [600, 1455], [600, 1575], [298, 1575]],
+      "view": {
+        "from": [440, 1900],
+        "height": 520
+      }
+    },
+    {
+      "id": "coffee",
+      "name": "咖啡沖調設備區",
+      "icon": "☕",
+      "summary": "靠窗嘅咖啡吧枱，配合「街坊咖啡師」計劃使用。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "floor": "G",
+      "at": [137, 1470],
+      "radius": 110,
+      "furniture": [
+        {"type": "coffee_bar", "dx": 0, "dy": 62, "w": 290, "d": 52, "r": 180},
+        {"type": "bar_stool", "dx": -47, "dy": 8},
+        {"type": "bar_stool", "dx": 48, "dy": 8}
+      ],
+      "tour": "咖啡角喺大門口旁邊，靠住玻璃窗，有吧枱同高腳凳。"
+    },
+    {
+      "id": "living",
+      "name": "休閒區",
+      "icon": "🛋️",
+      "summary": "地氈、梳化同單人梳化，坐低傾偈、休息。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tour": "休閒區有梳化、單人梳化同小圓几，街坊可以坐低傾偈。",
+      "floor": "G",
+      "at": [125, 1291],
+      "area": [[-12, 1197], [262, 1197], [262, 1385], [-12, 1385]]
     },
     {
       "id": "reception",
       "name": "接待處",
       "icon": "🛎️",
-      "summary": "喺地下前面左邊，近側門。",
+      "summary": "喺地下前面左邊，近側門，有 L 形接待枱。",
       "hours": "",
       "booking": "",
       "photo": "",
       "floor": "G",
-      "at": [-208, 1400],
-      "radius": 120
+      "at": [-216, 1411],
+      "radius": 110
     },
     {
       "id": "side-entrance",
@@ -50,50 +84,57 @@
       "photo": "",
       "tour": "接待處旁邊有一道側門，直接出入地下；門口有斜台。",
       "floor": "G",
-      "at": [-93, 1528],
-      "area": [[-150, 1455], [-35, 1455], [-35, 1575], [-150, 1575]],
-      "view": {"from": [-93, 1950], "height": 520}
+      "at": [-105, 1515],
+      "area": [[-165, 1440], [-50, 1440], [-50, 1575], [-165, 1575]],
+      "view": {
+        "from": [-105, 1950],
+        "height": 520
+      }
     },
     {
-      "id": "coffee",
-      "name": "咖啡沖調設備區",
-      "icon": "☕",
-      "summary": "配合「街坊咖啡師」計劃使用。",
+      "id": "play",
+      "name": "遊戲區",
+      "icon": "🧩",
+      "summary": "地下嘅小朋友遊戲角，有遊戲墊同遊戲隧道。",
       "hours": "",
       "booking": "",
       "photo": "",
-      "tentative": true,
+      "tour": "遊戲區喺廚房外面左邊，有遊戲墊、小枱凳同遊戲隧道；一樓另有兒童遊樂室。",
       "floor": "G",
-      "at": [157, 1500],
-      "radius": 130,
+      "at": [-245, 1000],
+      "area": [[-391, 800], [-112, 800], [-112, 975], [-391, 975]],
       "furniture": [
-        {"type": "coffee_bar", "dx": 0, "dy": -95, "w": 140, "d": 55}
+        {"type": "play_mat", "dx": -57, "dy": -120, "w": 145, "d": 130},
+        {"type": "kids_table", "dx": 45, "dy": -172, "w": 50, "d": 50},
+        {"type": "kids_stool", "dx": 95, "dy": -140},
+        {"type": "play_tunnel", "dx": -6, "dy": 110, "w": 50, "d": 160, "r": 118}
       ]
-    },
-    {
-      "id": "massage",
-      "name": "按摩椅",
-      "icon": "💆",
-      "summary": "身心放鬆設備。",
-      "hours": "",
-      "booking": "",
-      "photo": "",
-      "floor": "G",
-      "at": [-295, 1170],
-      "radius": 110
     },
     {
       "id": "library",
       "name": "圖書閣",
       "icon": "📚",
-      "summary": "閱讀及學習角落。",
+      "summary": "左邊牆嘅書櫃，閱讀及學習角落。",
       "hours": "",
       "booking": "",
       "photo": "",
       "tentative": true,
       "floor": "G",
-      "at": [-370, 1130],
-      "radius": 110
+      "at": [-372, 1081],
+      "radius": 60
+    },
+    {
+      "id": "dining",
+      "name": "用餐區",
+      "icon": "🍽️",
+      "summary": "兩張長枱，共 12 個座位，就近社區廚房。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tour": "用餐區喺社區廚房門外，有兩張長枱，煮好可以一齊食。",
+      "floor": "G",
+      "at": [180, 960],
+      "area": [[-10, 875], [365, 875], [365, 1070], [-10, 1070]]
     },
     {
       "id": "kitchen",
@@ -134,6 +175,53 @@
       "area": [[347, 250], [600, 250], [600, 800], [263, 800], [263, 548], [355, 548], [355, 415], [347, 415]]
     },
     {
+      "id": "health",
+      "name": "健康站",
+      "icon": "🩺",
+      "summary": "自助量度身體數據（例如血壓）。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tour": "健康站喺洗衣區旁邊，可以自助量度身體數據。",
+      "floor": "G",
+      "at": [527, 750],
+      "radius": 70,
+      "furniture": [
+        {"type": "health_kiosk", "dx": 0, "dy": 0, "w": 100, "d": 60}
+      ]
+    },
+    {
+      "id": "massage",
+      "name": "按摩椅",
+      "icon": "💆",
+      "summary": "喺地下右邊嘅按摩及健身區，身心放鬆設備。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "floor": "G",
+      "at": [495, 872],
+      "radius": 80,
+      "furniture": [
+        {"type": "massage_chair", "dx": 0, "dy": 0, "w": 75, "d": 125, "r": 48}
+      ]
+    },
+    {
+      "id": "gym",
+      "name": "健身設備",
+      "icon": "🏋️",
+      "summary": "喺地下右邊嘅按摩及健身區（樓梯底）。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tour": "健身設備喺按摩椅旁邊、樓梯底，器材種類待確認。",
+      "floor": "G",
+      "at": [515, 1060],
+      "radius": 70,
+      "furniture": [
+        {"type": "exercise_bike", "dx": 0, "dy": 20}
+      ]
+    },
+    {
       "id": "toilets",
       "name": "洗手間",
       "icon": "🚻",
@@ -157,7 +245,15 @@
       "floor": "all",
       "at": [537.5, 1210],
       "radius": 150,
-      "stairs": {"w": 125, "run": 490, "risers": 20, "r": 0, "well": 415, "topExit": "left", "bottomExit": "left"}
+      "stairs": {
+        "w": 125,
+        "run": 490,
+        "risers": 20,
+        "r": 0,
+        "well": 415,
+        "topExit": "left",
+        "bottomExit": "left"
+      }
     },
     {
       "id": "kids",
@@ -177,25 +273,6 @@
         {"type": "kids_stool", "dx": -145, "dy": 145},
         {"type": "kids_stool", "dx": -25, "dy": 145},
         {"type": "kids_stool", "dx": -85, "dy": 198}
-      ]
-    },
-    {
-      "id": "gym",
-      "name": "健身設備",
-      "icon": "🏋️",
-      "summary": "室內運動器材。",
-      "hours": "",
-      "booking": "",
-      "photo": "",
-      "tour": "健身設備暫定擺喺一樓多用途室。",
-      "tentative": true,
-      "floor": "1F",
-      "at": [110, 1200],
-      "radius": 150,
-      "furniture": [
-        {"type": "treadmill", "dx": -70, "dy": -50},
-        {"type": "exercise_bike", "dx": 30, "dy": -100},
-        {"type": "gym_mat", "dx": 320, "dy": 50, "r": 90}
       ]
     }
   ]

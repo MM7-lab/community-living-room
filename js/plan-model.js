@@ -63,6 +63,10 @@ export const CATALOG = {
   kids_stool: { w: 30, d: 30, ht: 30, sym: 'stool', name: '兒童凳' },
   laundry_tower: { w: 60, d: 65, ht: 172, sym: 'laundry', name: '洗衣機＋乾衣機（上下疊）' },
   folding_table: { w: 120, d: 60, ht: 80, sym: 'table', name: '摺衫枱' },
+  armchair: { w: 75, d: 75, ht: 80, sym: 'armchair', name: '單人梳化' },
+  rug: { w: 290, d: 200, ht: 1, sym: 'rug', name: '地氈' },
+  play_tunnel: { w: 60, d: 185, ht: 60, sym: 'tunnel', name: '遊戲隧道' },
+  health_kiosk: { w: 100, d: 60, ht: 130, sym: 'kiosk', name: '健康站（量度機）' },
   stairs: { w: 120, d: 480, ht: 350, sym: 'stairs', name: '樓梯', internal: true }, // 由設施 "stairs" 自動產生
 };
 export const FURNITURE_TYPES = Object.keys(CATALOG).filter(k => CATALOG[k].name && !CATALOG[k].internal);
@@ -273,7 +277,7 @@ export function lineBlocked(p, q, col) {
 }
 
 /* ---------- 中心同設施資料 ---------- */
-const PALETTE = ['#E07A3F', '#D9A23A', '#6FA36F', '#4F94B8', '#B7739B', '#C8694F', '#8C7BC0', '#3E9C8F', '#A0784F', '#5C86C9', '#D46A8C', '#7A9A3A', '#C0883A', '#4C7F99'];
+const PALETTE = ['#E07A3F', '#D9A23A', '#6FA36F', '#4F94B8', '#B7739B', '#C8694F', '#8C7BC0', '#3E9C8F', '#A0784F', '#5C86C9', '#D46A8C', '#7A9A3A', '#C0883A', '#4C7F99', '#9B5FB5', '#2F9E73', '#CC5A3A', '#6B7FD1'];
 const str = (v, max = 400) => typeof v === 'string' ? v.trim().slice(0, max) : (v == null ? '' : String(v).trim().slice(0, max));
 function xy(v) {
   if (Array.isArray(v) && v.length >= 2 && isNum(v[0]) && isNum(v[1])) return { x: +v[0], y: +v[1] };
@@ -411,7 +415,7 @@ export function stairsGeometry(f) {
   return {
     c, hw, hd, run: s.run, risers: s.risers, well: s.well,
     footprint: poly(-hw, -hd, hw, hd),
-    lower: { floor: s.lower, to: s.upper, colliders: [rect(-hw, lowFrom, hw, hd - 60)], trigger: { x0: -hw + 6, x1: hw - 6, y0: hd - 58, y1: hd - 6 }, arrive: pose(0, -hd - 50, [0, -1], s.topExit) },
+    lower: { floor: s.lower, to: s.upper, colliders: [{ ...rect(-hw, lowFrom, hw, hd - 60), localFrom: lowFrom }], trigger: { x0: -hw + 6, x1: hw - 6, y0: hd - 58, y1: hd - 6 }, arrive: pose(0, -hd - 50, [0, -1], s.topExit) },
     // 上層：樓梯井擋路，淨係樓梯頂可以落
     upper: { floor: s.upper, to: s.lower, colliders: [rect(-hw, -hd + 50, hw, -hd + s.well)], trigger: { x0: -hw + 6, x1: hw - 6, y0: -hd + 6, y1: -hd + 48 }, arrive: pose(0, hd + 50, [0, 1], s.bottomExit) },
     hole: poly(-hw, -hd, hw, -hd + s.well),
@@ -436,7 +440,7 @@ export function furnitureProblems(plan, facilities, obstacles = []) {
   const flat = it => heightOf(it) < 10;
   const mine = facilities.flatMap(f => (f.furniture || []).map(it => ({ it, f })));
   mine.forEach(({ it, f }, k) => {
-    const label = `「${f.name}」嘅 ${CATALOG[it.type].name || it.type}`;
+    const label = `「${f.name}」嘅 ${CATALOG[it.type].name || it.type}`; // 地墊、地氈上面擺嘢唔當疊埋
     let wall = false, outside = false;
     for (let i = 0; i <= 6 && !wall && !outside; i++) for (let j = 0; j <= 6; j++) {
       const p = toWorldFrom(it, -it.w / 2 + it.w * i / 6, -it.h / 2 + it.h * j / 6);
@@ -451,7 +455,7 @@ export function furnitureProblems(plan, facilities, obstacles = []) {
       if ((isDoor || o.type === 'column' || (!flat(it) && !flat(o))) && hit(it, o)) out.push(`${label}${isDoor ? '擋住咗門口' : '撞到原有傢俬'}。`);
     });
     obstacles.forEach(o => { if (hit(it, o)) out.push(`${label}擋住咗${o.label || '樓梯'}。`); });
-    mine.slice(k + 1).forEach(({ it: o, f: g }) => { if (!(flat(it) && flat(o)) && hit(it, o)) out.push(`${label}同「${g.name}」嘅 ${CATALOG[o.type].name || o.type} 疊埋。`); });
+    mine.slice(k + 1).forEach(({ it: o, f: g }) => { if (!flat(it) && !flat(o) && hit(it, o)) out.push(`${label}同「${g.name}」嘅 ${CATALOG[o.type].name || o.type} 疊埋。`); });
   });
   return [...new Set(out)];
 }
@@ -472,8 +476,8 @@ export function allFurnitureProblems(plans, data) {
       const sg = stairsGeometry(f); if (!sg) return null;
       const lower = sg.lower.floor === fl.id, upper = sg.upper.floor === fl.id;
       if (!lower && !upper) return null;
-      const len = lower ? sg.run : sg.well, m = toWorldFrom(sg.c, 0, -sg.hd + len / 2);
-      return { label: f.name, x: m.x, y: m.y, w: sg.hw * 2 - 6, h: len - 6, r: sg.c.r };
+      const y0 = lower ? sg.lower.colliders[0].localFrom : -sg.hd, y1 = lower ? sg.hd : -sg.hd + sg.well, m = toWorldFrom(sg.c, 0, (y0 + y1) / 2);
+      return { label: f.name, x: m.x, y: m.y, w: sg.hw * 2 - 6, h: y1 - y0 - 6, r: sg.c.r };
     }).filter(Boolean);
     furnitureProblems(plan, data.facilities.filter(f => f.floor === fl.id), obs).forEach(m => out.push(pre + m));
     obs.forEach(o => plan.items.forEach(it => {

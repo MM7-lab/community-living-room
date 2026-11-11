@@ -191,11 +191,11 @@ await check('4. 漫遊：手機掣行得，唔會穿牆', async () => {
   assert.ok(s2.y < 1575 - 22, `穿咗牆：y = ${s2.y.toFixed(1)}（牆喺 y = 1575）`);
 });
 await check('4b. 漫遊：入門口行得過（門唔會擋死）', async () => {
-  // 由大門口（Foyer）向西行，經 DR-05 入地下 Drop-in 區：門喺 x = 340，y 1465–1545。yaw = π/2 即係向西。
-  await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(420, 1505); v.setYaw(Math.PI / 2); });
-  await holdUntil(page, { button: '[data-wk="f"]' }, () => window.__clr.S.view.walkState().x < 320);
+  // 由大門口（Foyer）向北行，經 DR-05 入地下：門喺 y = 1455，x 348–445。yaw = 0 即係向北。
+  await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(395, 1525); v.setYaw(0); });
+  await holdUntil(page, { button: '[data-wk="f"]' }, () => window.__clr.S.view.walkState().y < 1420);
   const s2 = await page.evaluate(() => window.__clr.S.view.walkState());
-  assert.ok(s2.x < 320, `行唔入地下：x = ${s2.x.toFixed(1)}`);
+  assert.ok(s2.y < 1420, `行唔入地下：y = ${s2.y.toFixed(1)}`);
   await page.screenshot({ path: join(OUT, '06-walk-door.png') });
 });
 
@@ -267,6 +267,12 @@ await check('6. 全部繁體中文、字夠大（手機直向）', async () => {
   await page.click('[data-tab="list"]');
   await page.screenshot({ path: join(OUT, '08-list.png') });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, '有橫向捲動');
+});
+
+await check('冇顯示地區名同標誌', async () => {
+  const r = await page.evaluate(() => ({ txt: /\u89c0\u5858|kwun\s*tong/i.test(document.body.innerText + document.title), logo: document.querySelectorAll('.logo, header img, header svg:not(.top-btn svg)').length }));
+  assert.equal(r.txt, false, '網頁有地區名');
+  assert.equal(r.logo, 0, '標題有標誌');
 });
 
 await check('私隱：平面圖冇任何標籤（標籤可能有同事名）', async () => {

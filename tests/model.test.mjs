@@ -62,7 +62,8 @@ test('漫遊：一大步都唔會跳過牆', () => {
 test('漫遊：門口行得過（地下）', () => {
   assert.ok(stepWalk({ x: 412, y: 320 }, { x: 412, y: 150 }, col).y < 240, '入唔到洗手間 2');
   assert.ok(stepWalk({ x: 150, y: 476 }, { x: 300, y: 476 }, col).x > 215, '出唔到廚房門（DR-02）');
-  assert.ok(stepWalk({ x: 420, y: 1505 }, { x: 250, y: 1505 }, col).x < 330, '由大門口入唔到地下（DR-05）');
+  assert.ok(stepWalk({ x: 395, y: 1520 }, { x: 395, y: 1380 }, col).y < 1440, '由大門口入唔到地下（DR-05，新設計喺北面）');
+  assert.ok(stepWalk({ x: 420, y: 1505 }, { x: 200, y: 1505 }, col).x > 300, '大門口西面應該係實牆');
   assert.ok(!insideBuilding(plan, stepWalk({ x: 420, y: 1520 }, { x: 420, y: 1700 }, col)), '行唔出大門');
 });
 
@@ -86,7 +87,11 @@ test('實心牆會遮住設施標記，玻璃牆唔會', () => {
 test('撳平面圖揀設施：點優先，再睇範圍，淨係揀同一層', () => {
   const d = normalizeCenter(center, plans), G = facilitiesOn(d.facilities, 'G'), F1 = facilitiesOn(d.facilities, '1F');
   assert.equal(facilityAt(G, { x: 420, y: 1515 })?.id, 'entrance');
-  assert.equal(facilityAt(G, { x: -295, y: 1170 })?.id, 'massage');
+  assert.equal(facilityAt(G, { x: 495, y: 872 })?.id, 'massage');
+  assert.equal(facilityAt(G, { x: -300, y: 900 })?.id, 'play');
+  assert.equal(facilityAt(G, { x: 300, y: 1040 })?.id, 'dining');
+  assert.equal(facilityAt(G, { x: 30, y: 1360 })?.id, 'living');
+  assert.equal(facilityAt(G, { x: 520, y: 750 })?.id, 'health', '健康站（點）喺洗衣區範圍入面，點要優先');
   assert.equal(facilityAt(G, { x: 150, y: 250 })?.id, 'tv', '大電視（點）喺廚房範圍入面，點要優先');
   assert.equal(facilityAt(G, { x: -300, y: 420 })?.id, 'kitchen');
   assert.equal(facilityAt(G, { x: 480, y: 650 })?.id, 'laundry');
@@ -128,10 +133,10 @@ test('平面圖原有傢俬：冇撞牆、冇擋門、冇疊埋', () => {
 
 test('設施傢俬：放錯位會俾檢查捉到（撞牆、擋門、擋樓梯）', () => {
   const bad = JSON.parse(JSON.stringify(center));
-  const gym = bad.facilities.find(f => f.id === 'gym');
-  gym.furniture[0].dx -= 200;                                   // 一樓：跑步機推出外牆
-  gym.furniture.push({ type: 'sofa', dx: 310, dy: -140 });      // 一樓：擋住多用途室門
-  bad.facilities.find(f => f.id === 'coffee').furniture.push({ type: 'sofa', dx: 380, dy: -280, w: 100 }); // 地下：擋住樓梯
+  const kids = bad.facilities.find(f => f.id === 'kids');
+  kids.furniture[0].dx -= 260;                                  // 一樓：遊戲地墊推出外牆
+  kids.furniture.push({ type: 'sofa', dx: 260, dy: 250 });      // 一樓：擋住多用途室門
+  bad.facilities.find(f => f.id === 'coffee').furniture.push({ type: 'sofa', dx: 400, dy: -250, w: 100 }); // 地下：擋住樓梯
   const probs = allFurnitureProblems(plans, normalizeCenter(bad, plans));
   assert.ok(probs.some(p => p.startsWith('一樓') && (p.includes('牆') || p.includes('外框'))), probs.join('\n'));
   assert.ok(probs.some(p => p.startsWith('一樓') && p.includes('門口')), probs.join('\n'));
@@ -151,10 +156,10 @@ test('設施傢俬：跟住設施位置搬', () => {
   assert.equal(b.x, a.x);
 });
 
-test('漫遊：傢俬會擋路（梳化）', () => {
-  const sofa = plan.items.find(i => i.type === 'sofa');
-  const p = stepWalk({ x: sofa.x, y: 990 }, { x: sofa.x, y: 700 }, col);
-  assert.ok(p.y >= sofa.y + sofa.h / 2 + WALK_R - 1, `穿過咗梳化：y = ${p.y}`);
+test('漫遊：傢俬會擋路（用餐區長枱）', () => {
+  const t = plan.items.find(i => i.type === 'meeting' && i.r === 90 && i.y > 900);   // 用餐區直放長枱
+  const p = stepWalk({ x: t.x, y: 870 }, { x: t.x, y: 1150 }, col);
+  assert.ok(p.y <= t.y - t.w / 2 - WALK_R + 1, `穿過咗長枱：y = ${p.y}`);
 });
 
 // 每層嘅碰撞（連樓梯）同可以行到嘅範圍

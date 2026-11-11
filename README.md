@@ -64,6 +64,10 @@ QR code 圖檔：[`assets/qr-code.png`](assets/qr-code.png)（印刷用）、[`a
 
 兩層平面圖按**竣工平面圖（As-fitted Layout Plan，Yuen Fat，2024-06-27，1:100）**描繪：`data/plan.json`（地下）、`data/plan-1f.json`（一樓）。坐標單位 cm，x = 0 係 E 軸線，y = 0 係後牆內面，向大門口方向增加；描圖誤差大約 ±10 cm。
 
+地下廚房外面（遊戲區、用餐區、休閒區、接待處、咖啡角、按摩及健身區、健康站、大門口入地下嗰道門）就按 **2026 年 8 月嘅新設計圖（1:100）**描繪。新設計圖同竣工圖嘅比例對唔齊（大約差 5%），所以呢部分誤差大約 ±20 cm。
+
+> 暫時唔好喺網頁或者資料檔寫中心所在地區名，亦唔好加任何標誌；`npm run check` 同 `npm run e2e` 會檢查。
+
 - 所有牆、門、窗、柱同固定傢俬都寫喺 `tools/trace-floor-plan.py`。要改平面圖，改呢個檔再跑 `python3 tools/trace-floor-plan.py`，唔好直接改兩個 JSON。
 - 每個設施用 `"floor": "G"` 或者 `"1F"` 講明喺邊層；`"floor": "all"` 即係兩層都見到（樓梯）。
 - 樓梯係直樓梯，喺 `center.json` 嘅樓梯設施設定：
@@ -114,9 +118,13 @@ QR code 圖檔：[`assets/qr-code.png`](assets/qr-code.png)（印刷用）、[`a
 | `kids_table` / `kids_stool` | 兒童枱／兒童凳 | 80×60×50 ／ 30×30×30 |
 | `laundry_tower` | 洗衣機＋乾衣機（上下疊） | 60×65×172 |
 | `folding_table` | 摺衫枱 | 120×60×80 |
+| `armchair` | 單人梳化 | 75×75×80 |
+| `rug` | 地氈 | 290×200×1 |
+| `play_tunnel` | 遊戲隧道 | 60×185×60 |
+| `health_kiosk` | 健康站（量度機） | 100×60×130 |
 | `chair` | 椅（同辦公室工具一樣） | 50×50×90 |
 
-尺寸係常見款式嘅大約數，唔係實物量度；有實物尺寸就填 `w`／`d`／`ht`。`npm run check`（同 GitHub 自動檢查）會提示傢俬撞牆、出咗平面圖、疊埋或者擋住門口。
+尺寸係常見款式嘅大約數，唔係實物量度；有實物尺寸就填 `w`／`d`／`ht`。`npm run check`（同 GitHub 自動檢查）會提示傢俬撞牆、出咗平面圖、疊埋或者擋住門口（擺喺地墊、地氈上面唔當疊埋）。
 
 ## 更新平面圖
 

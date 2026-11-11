@@ -40,6 +40,10 @@ if (rawCenter) {
     if (labelled.length) fail(`${fl.plan} 有 ${labelled.length} 件傢俬有標籤（例如「${labelled[0].label}」）。標籤可能有同事名，請用 tools/import-office-plan.mjs 重新匯入，或者刪除 label。`);
     if ((raw.layout?.rooms || []).some(r => r.src || r.name)) warn(`${fl.plan} 嘅房間有名稱或者備註；網頁唔會顯示，但檔案係公開嘅，請確認冇私人資料。`);
   }
+  // 暫時唔顯示地區名：等同工確認可以公開先刪走呢條檢查
+  for (const [file, txt] of [['data/center.json', JSON.stringify(rawCenter)], ...floors.map(fl => [fl.plan, JSON.stringify(readJSON(fl.plan) || {})])]) {
+    if (/\u89c0\u5858|kwun\s*tong/i.test(txt)) fail(`${file} 有地區名字眼；暫時唔好喺網頁顯示。`);
+  }
   if (!failed) {
     const d = normalizeCenter(rawCenter, plans);
     d.errors.forEach(fail);

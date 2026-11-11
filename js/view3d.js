@@ -39,7 +39,7 @@ const MAT_SPEC = {
   // 設施傢俬用色
   chrome: [0xC9CED2], red: [0xD9573F], blue: [0x5B8FC9], green: [0x79B86F], yellow: [0xF2C14E], pink: [0xEE9FB0],
   white: [0xFBFAF7], sofa: [0xE59A62], cushion: [0xF4D3A8], leather: [0x7D5440], rubber: [0x6E9E96], black: [0x35302C], glassdark: [0x6F93AD],
-  stair: [0xD8B48A], slab: [0xE9DCC8],
+  stair: [0xD8B48A], slab: [0xE9DCC8], rugc: [0xE7CFA8], tunnel: [0x8FC1E3], kiosk: [0x9C8FD0],
 };
 const WOOD = new Set(['window1', 'window2', 'cube3', 'sqcab', 'rectcab', 'bigrect', 'incentive', 'tv_cabinet']);
 // 書本、地磚、玩具用嘅顏色（暖色為主）
@@ -289,6 +289,20 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         break;
       }
       case 'mat': box3(g, w, Math.max(H, 1.5), d, 0, 0, 0, 'rubber', false); break;
+      case 'rug': box3(g, w, 1.2, d, 0, 0, 0, 'rugc', false); box3(g, w - 30, 1.4, d - 30, 0, 0, 0, 'cushion', false); break;
+      case 'armchair':
+        box3(g, w, 40, d, 0, 0, 0, 'sofa'); box3(g, w - 20, 10, d - 22, 0, 40, 6, 'cushion');
+        box3(g, w, 42, 16, 0, 40, -d / 2 + 8, 'sofa'); box3(g, 10, 20, d, -w / 2 + 5, 40, 0, 'sofa'); box3(g, 10, 20, d, w / 2 - 5, 40, 0, 'sofa');
+        break;
+      case 'tunnel': {
+        const tube = new T.Mesh(new T.CylinderGeometry(w / 2, w / 2, d, 24, 1, true), mat('tunnel'));
+        tube.material.side = T.DoubleSide; tube.rotation.x = Math.PI / 2; tube.position.y = w / 2; tube.castShadow = true; g.add(tube);
+        break;
+      }
+      case 'kiosk':
+        box3(g, w, 75, d, 0, 0, 0, 'kiosk'); box3(g, w * 0.7, 45, 8, 0, 80, -d / 2 + 12, 'white');
+        box3(g, w * 0.6, 32, 2, 0, 86, -d / 2 + 17, 'glassdark', false);
+        break;
       case 'playmat': {
         const nx = 4, nz = 3, tw = w / nx, td = d / nz, cols = ['#F2C14E', '#7FB8E0', '#F08A7E', '#8FCB8A', '#C9A3E0', '#F6B26B'];
         const tiles = [];
