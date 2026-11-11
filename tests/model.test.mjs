@@ -216,3 +216,11 @@ test('樓梯：落腳點企得穩，唔會即刻觸發返轉頭；由側面行�
   const p = stepWalk({ x: 400, y: 1300 }, { x: 560, y: 1300 }, floorCol('G'));
   assert.ok(p.x <= 475 - 4 - WALK_R + 1, `由側面行咗入樓梯：x = ${p.x}`);
 });
+
+test('側門（接待處旁 DR-04）：由街外行得入地下，亦行得出', () => {
+  const d = normalizeCenter(center, plans), f = d.facilities.find(x => x.id === 'side-entrance');
+  assert.ok(f && f.floor === 'G', '冇側門設施');
+  const inside = stepWalk({ x: f.at.x, y: 1680 }, { x: f.at.x, y: 1380 }, col);
+  assert.ok(insideBuilding(plan, inside) && inside.y < 1450, `由側門入唔到：y = ${inside.y}`);
+  assert.ok(!insideBuilding(plan, stepWalk({ x: f.at.x, y: 1420 }, { x: f.at.x, y: 1700 }, col)), '由側門出唔到');
+});
