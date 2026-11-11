@@ -43,6 +43,12 @@ function symbol(sym, w, h, type = '') {
     case 'rug': return rect(X, Y, w, h, 'f-rug', 4) + rect(X + 12, Y + 12, w - 24, h - 24, 'f-line', 2);
     case 'armchair': return rect(X, Y, w, h, 'f-sofa', 12) + rect(X + 10, Y + 16, w - 20, h - 20, 'f-cushion', 6);
     case 'tunnel': return rect(X, Y, w, h, 'f-tunnel', w / 2) + `<circle class="f-line" cx="0" cy="${r2(Y + w / 2)}" r="${r2(w / 2 - 6)}"/>`;
+    case 'upper': return rect(X, Y, w, h, 'f-upper', 2);
+    case 'ring': case 'acoustic': case 'baffle': return '';
+    case 'rail': return rect(X, Y, w, Math.max(h, 4), 'f-dark', 2);
+    case 'platform': return rect(X, Y, w, h, 'f-body', 2) + line(X, Y + 25, X + w, Y + 25);
+    case 'arch': return rect(X, Y, w, Math.max(h, 6), 'f-arch', 2);
+    case 'kioskwall': return rect(X, Y, w, h, 'f-wood', 2);
     case 'kiosk': return rect(X, Y, w, h, 'f-kiosk', 6) + rect(X + w * 0.15, Y + 6, w * 0.7, 10, 'f-dark', 2);
     case 'bookshelf': return rect(X, Y, w, h, 'f-wood', 2) + Array.from({ length: Math.floor((w - 8) / 7) }, (_, i) => `<rect x="${r2(X + 4 + i * 7)}" y="${r2(Y + h * 0.3)}" width="5.5" height="${r2(h * 0.6)}" style="fill:${BRIGHT[(i * 5 + 3) % BRIGHT.length]}"/>`).join('');
     case 'playmat': { const cols = ['#F2C14E', '#7FB8E0', '#F08A7E', '#8FCB8A', '#C9A3E0', '#F6B26B']; let s = ''; for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) s += `<rect x="${r2(X + w / 4 * i)}" y="${r2(Y + h / 3 * j)}" width="${r2(w / 4)}" height="${r2(h / 3)}" style="fill:${cols[(i + j * 2) % cols.length]};fill-opacity:.75"/>`; return s + rect(X, Y, w, h, 'f-line', 6); }

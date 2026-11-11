@@ -186,7 +186,7 @@ h1, h2, h3, p { margin: 0; }
 .f-body, .f-line, .f-chair, .f-panel, .f-shelf, .f-dark, .f-box, .f-col, .f-plant, .f-swing, .f-leaf, .f-win, .f-winline { vector-effect: non-scaling-stroke; }
 .f-body { fill: #FFFCF6; stroke: #A68D78; stroke-width: 1.2; }
 .f-line { fill: none; stroke: #BBA48F; stroke-width: 1; }
-.f-chair { fill: #F7CBAA; stroke: #CF8D60; stroke-width: 1; }
+.f-chair { fill: #E6DED3; stroke: #A99D8F; stroke-width: 1; }
 .f-panel { fill: #9FC3A2; stroke: #7FA582; stroke-width: 1; }
 .f-shelf { fill: #EEE6DB; stroke: #A68D78; stroke-width: 1.2; }
 .f-dark { fill: #6A5A50; stroke: #4E4038; stroke-width: 1; }
@@ -203,8 +203,8 @@ h1, h2, h3, p { margin: 0; }
 .f-red { fill: #D9573F; stroke: #A63F2B; stroke-width: 1; }
 .f-white { fill: #FFFFFF; stroke: #A68D78; stroke-width: 1.2; }
 .f-kid { fill: #F2C14E; stroke: #C99A2A; stroke-width: 1; }
-.f-sofa { fill: #E59A62; stroke: #B8713F; stroke-width: 1.2; }
-.f-cushion { fill: #F4D3A8; stroke: #D3A877; stroke-width: 1; }
+.f-sofa { fill: #A89E93; stroke: #7A7065; stroke-width: 1.2; }
+.f-cushion { fill: #C4BBB0; stroke: #988E83; stroke-width: 1; }
 .f-leather { fill: #8E614A; stroke: #5E3E2E; stroke-width: 1.2; }
 .f-belt { fill: #35302C; stroke: none; }
 .f-mat { fill: #8DBDB5; stroke: #5E918A; stroke-width: 1; }
@@ -349,6 +349,9 @@ h1, h2, h3, p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .floor-flash.go { animation-duration: .01s; } }
 
 .f-rug, .f-tunnel, .f-kiosk { vector-effect: non-scaling-stroke; }
-.f-rug { fill: #EFD9B4; stroke: #C9A877; stroke-width: 1.2; }
+.f-rug { fill: #B9AB6A; stroke: #8C7C34; stroke-width: 1.2; }
 .f-tunnel { fill: #A9D1EC; stroke: #5B8FC9; stroke-width: 1.4; }
 .f-kiosk { fill: #C5BCEB; stroke: #7E70C2; stroke-width: 1.2; }
+.f-upper, .f-arch { vector-effect: non-scaling-stroke; }
+.f-upper { fill: none; stroke: #7E9A6B; stroke-width: 1.2; stroke-dasharray: 4 3; }
+.f-arch { fill: #9DB58A; stroke: #6F8A5D; stroke-width: 1.2; }

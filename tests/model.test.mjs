@@ -89,17 +89,18 @@ test('撳平面圖揀設施：點優先，再睇範圍，淨係揀同一層', ()
   assert.equal(facilityAt(G, { x: 420, y: 1515 })?.id, 'entrance');
   assert.equal(facilityAt(G, { x: 495, y: 872 })?.id, 'massage');
   assert.equal(facilityAt(G, { x: -300, y: 900 })?.id, 'play');
-  assert.equal(facilityAt(G, { x: 300, y: 1040 })?.id, 'dining');
-  assert.equal(facilityAt(G, { x: 30, y: 1360 })?.id, 'living');
+  assert.equal(facilityAt(G, { x: 340, y: 1240 })?.id, 'dining');
+  assert.equal(facilityAt(G, { x: 30, y: 1000 })?.id, 'living');
+  assert.equal(facilityAt(G, { x: 100, y: 860 })?.id, 'tv', '大電視（點）喺休閒區範圍入面，點要優先');
   assert.equal(facilityAt(G, { x: 520, y: 750 })?.id, 'health', '健康站（點）喺洗衣區範圍入面，點要優先');
-  assert.equal(facilityAt(G, { x: 150, y: 250 })?.id, 'tv', '大電視（點）喺廚房範圍入面，點要優先');
+  assert.equal(facilityAt(G, { x: 150, y: 250 })?.id, 'kitchen', '大電視已經搬去大廳，廚房分享區屬社區廚房');
   assert.equal(facilityAt(G, { x: -300, y: 420 })?.id, 'kitchen');
   assert.equal(facilityAt(G, { x: 480, y: 650 })?.id, 'laundry');
   assert.equal(facilityAt(G, { x: 520, y: 120 })?.id, 'toilets');
   assert.equal(facilityAt(G, { x: 537, y: 1300 })?.id, 'stairs');
   assert.equal(facilityAt(F1, { x: 537, y: 1300 })?.id, 'stairs', '樓梯兩層都有');
   assert.equal(facilityAt(F1, { x: 100, y: 800 })?.id, 'kids');
-  assert.equal(facilityAt(G, { x: 100, y: 800 }), null, '地下冇兒童遊樂室');
+  assert.equal(facilityAt(G, { x: -330, y: 1290 }), null, '地下呢個位冇設施（一樓先有兒童遊樂室）');
 });
 
 test('相片路徑：只接受相對路徑或者 https', () => {
@@ -156,10 +157,10 @@ test('設施傢俬：跟住設施位置搬', () => {
   assert.equal(b.x, a.x);
 });
 
-test('漫遊：傢俬會擋路（用餐區長枱）', () => {
-  const t = plan.items.find(i => i.type === 'meeting' && i.r === 90 && i.y > 900);   // 用餐區直放長枱
-  const p = stepWalk({ x: t.x, y: 870 }, { x: t.x, y: 1150 }, col);
-  assert.ok(p.y <= t.y - t.w / 2 - WALK_R + 1, `穿過咗長枱：y = ${p.y}`);
+test('漫遊：傢俬會擋路（用餐區餐枱）', () => {
+  const t = plan.items.find(i => i.type === 'dining_table');   // 用餐區直放餐枱
+  const p = stepWalk({ x: t.x, y: 1420 }, { x: t.x, y: 1100 }, col);
+  assert.ok(p.y >= t.y + t.w / 2 + WALK_R - 1, `穿過咗餐枱：y = ${p.y}`);
 });
 
 // 每層嘅碰撞（連樓梯）同可以行到嘅範圍

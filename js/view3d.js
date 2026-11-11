@@ -33,15 +33,16 @@ export function hasWebGL() {
 // 暖色調：米白牆、木地板色、橙色椅、鼠尾草綠屏風。
 const MAT_SPEC = {
   floor: [0xEEDDC3], ceiling: [0xFFF8EE], wall: [0xFBF3E7], cap: [0xB98B62], glass: [0xA6D3E6, 0.32],
-  wood: [0xD4A570], top: [0xEBD3AE], steel: [0xB8AC9F], dark: [0x5E514A], chair: [0xE48F5C], fabric: [0xBFD7C0],
+  wood: [0xDDB680], top: [0xEBD3AE], steel: [0xB8AC9F], dark: [0x5E514A], chair: [0xD6CCBF], fabric: [0xBFD7C0],
   door: [0xC98B57], column: [0xF1E7D8], card: [0xC9995F], screen: [0x2D2826], plant: [0x6FAF73], pot: [0xB78C6C],
   machine: [0xF6F1EA], light: [0xF7F0E5], ground: [0xF2E6D3],
   // 設施傢俬用色
   chrome: [0xC9CED2], red: [0xD9573F], blue: [0x5B8FC9], green: [0x79B86F], yellow: [0xF2C14E], pink: [0xEE9FB0],
-  white: [0xFBFAF7], sofa: [0xE59A62], cushion: [0xF4D3A8], leather: [0x7D5440], rubber: [0x6E9E96], black: [0x35302C], glassdark: [0x6F93AD],
-  stair: [0xD8B48A], slab: [0xE9DCC8], rugc: [0xE7CFA8], tunnel: [0x8FC1E3], kiosk: [0x9C8FD0],
+  white: [0xFBFAF7], sofa: [0x958A7E], cushion: [0xACA196], leather: [0x6F6A66], rubber: [0x6E9E96], black: [0x35302C], glassdark: [0x6F93AD],
+  stair: [0xD8B48A], slab: [0xE9DCC8], rugc: [0x8C7C34], rugc2: [0x9C8C42], tunnel: [0x8FC1E3], kiosk: [0xF3EEE6],
+  sage: [0x9DB58A], teal: [0x2F6153], denim: [0x5B87B8], baffle: [0x3A3633], step: [0xE6DCCD],
 };
-const WOOD = new Set(['window1', 'window2', 'cube3', 'sqcab', 'rectcab', 'bigrect', 'incentive', 'tv_cabinet']);
+const WOOD = new Set(['window1', 'window2', 'cube3', 'sqcab', 'rectcab', 'bigrect', 'incentive', 'tv_cabinet', 'roomsupply', 'signin']);
 // 書本、地磚、玩具用嘅顏色（暖色為主）
 const BRIGHT = ['#D9573F', '#5B8FC9', '#79B86F', '#F2C14E', '#EE9FB0', '#9C83C9', '#E59A62', '#3E9C8F', '#F6EEDF'];
 const seeded = seed => { let s = 0; for (const ch of String(seed)) s = (s * 31 + ch.charCodeAt(0)) % 233280; return () => (s = (s * 9301 + 49297) % 233280) / 233280; };
@@ -241,8 +242,8 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         for (let i = 0; i < n; i++) box3(g, cw - 2, 12, d - 24, -w / 2 + 12 + cw * (i + 0.5), 40, 8, 'cushion');
         box3(g, w, 45, 20, 0, 40, -d / 2 + 10, 'sofa');
         box3(g, 12, 22, d, -w / 2 + 6, 40, 0, 'sofa'); box3(g, 12, 22, d, w / 2 - 6, 40, 0, 'sofa');
-        box3(g, 30, 28, 10, -w / 2 + 34, 52, -d / 2 + 26, 'yellow');   // 咕𠱸
-        box3(g, 30, 28, 10, w / 2 - 34, 52, -d / 2 + 26, 'blue');
+        box3(g, 30, 28, 10, -w / 2 + 34, 52, -d / 2 + 26, 'white');    // 咕𠱸
+        box3(g, 30, 28, 10, w / 2 - 34, 52, -d / 2 + 26, 'cushion');
         break;
       }
       case 'table': {
@@ -253,7 +254,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         break;
       }
       case 'roundtable':
-        cyl3(g, w / 2, w / 2, 4, 0, H - 4, 0, 'wood', 32);
+        cyl3(g, w / 2, w / 2, 4, 0, H - 4, 0, 'white', 32);
         cyl3(g, 4, 4, H - 4, 0, 0, 0, 'steel', 12);
         cyl3(g, w / 4, w / 4, 3, 0, 0, 0, 'steel', 24);
         break;
@@ -289,7 +290,57 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         break;
       }
       case 'mat': box3(g, w, Math.max(H, 1.5), d, 0, 0, 0, 'rubber', false); break;
-      case 'rug': box3(g, w, 1.2, d, 0, 0, 0, 'rugc', false); box3(g, w - 30, 1.4, d - 30, 0, 0, 0, 'cushion', false); break;
+      case 'rug': box3(g, w, 1.2, d, 0, 0, 0, 'rugc', false); box3(g, w - 30, 1.4, d - 30, 0, 0, 0, 'rugc2', false); break;
+      case 'upper':                                                   // 吊櫃：離地 150 cm
+        box3(g, w, H, d, 0, 150, 0, 'sage');
+        for (let i = 1; i < Math.round(w / 50); i++) box3(g, 1, H - 4, 1, -w / 2 + i * w / Math.round(w / 50), 152, d / 2, 'dark', false);
+        break;
+      case 'ring': {                                                  // 圓形 LED 吊燈：淨係完整牆身先見
+        if (low) return null;
+        const ring = new T.Mesh(new T.TorusGeometry(w / 2, 2.2, 8, 48), new T.MeshBasicMaterial({ color: 0xFFF7E2 }));
+        ring.rotation.x = Math.PI / 2; ring.position.y = WALL_H - 22; g.add(ring);
+        for (const a of [0, 2.1, 4.2]) box3(g, 0.6, 18, 0.6, Math.cos(a) * w / 2, WALL_H - 22, Math.sin(a) * w / 2, 'black', false);  // 吊線
+        g.userData.ceil = true;
+        break;
+      }
+      case 'acoustic': {                                              // 吸音板：圓角方形轉 45 度，一角係尖
+        const s = w / 2, k = s * 0.55, sh = new T.Shape();
+        sh.moveTo(-s, -s); sh.lineTo(s - k, -s); sh.quadraticCurveTo(s, -s, s, -s + k); sh.lineTo(s, s - k); sh.quadraticCurveTo(s, s, s - k, s);
+        sh.lineTo(-s + k, s); sh.quadraticCurveTo(-s, s, -s, s - k); sh.lineTo(-s, -s);
+        const m = new T.Mesh(new T.ExtrudeGeometry(sh, { depth: 2.5, bevelEnabled: false }), mat(it.type === 'acoustic_green' ? 'teal' : 'denim'));
+        m.rotation.z = Math.PI / 4; m.position.set(0, it.type === 'acoustic_green' ? 205 : 135, d / 2 - 2.5); g.add(m);
+        break;
+      }
+      case 'baffle': {                                                // 黑色格柵天花（大廳）：淨係完整牆身先見
+        if (low) return null;
+        box3(g, w, 1, d, 0, WALL_H - 3, 0, 'black', false);
+        for (let x = -w / 2 + 6; x < w / 2; x += 12) box3(g, 3, 9, d, x, WALL_H - 12, 0, 'baffle', false);
+        g.userData.ceil = true;
+        break;
+      }
+      case 'rail':                                                    // 不鏽鋼扶手
+        cyl3(g, 2.2, 2.2, H, -w / 2 + 4, 0, 0, 'chrome', 10); cyl3(g, 2.2, 2.2, H, w / 2 - 4, 0, 0, 'chrome', 10);
+        box3(g, w, 4, 4, 0, H - 4, 0, 'chrome', false);
+        break;
+      case 'platform':                                                // 兩級台階：級口向本地 -y
+        box3(g, w, H / 2, d, 0, 0, 0, 'step'); box3(g, w, H / 2, d - 25, 0, H / 2, 12.5, 'step');
+        break;
+      case 'arch': {                                                  // 綠色拱門屏風，有大細兩個圓窿
+        const sh = new T.Shape();
+        sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, H); sh.lineTo(-w / 2, H); sh.lineTo(-w / 2, 0);
+        const hole = (cx, cy, r) => { const p = new T.Path(); p.absarc(cx, cy, r, 0, Math.PI * 2, true); sh.holes.push(p); };
+        hole(w / 2 - 70, 105, 55); hole(-w / 2 + 50, 200, 30);
+        const geo = new T.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false, curveSegments: 24 }); geo.translate(0, 0, -d / 2);
+        g.add(new T.Mesh(geo, mat('sage')));
+        break;
+      }
+      case 'kioskwall': {                                             // 木牆身：自助服務機、資訊牌、鐘
+        box3(g, w, H, d, 0, 0, 0, 'wood');
+        box3(g, 26, 40, 4, -w / 2 + 18, 105, d / 2 + 2, 'white'); box3(g, 22, 30, 1, -w / 2 + 18, 112, d / 2 + 4, 'glassdark', false);
+        box3(g, 26, 30, 3, w / 2 - 18, 110, d / 2 + 1.5, 'white');
+        const clock = cyl3(g, 11, 11, 2, 0, 0, 0, 'white', 24); clock.rotation.x = Math.PI / 2; clock.position.set(-w / 2 + 18, 175, d / 2 + 1);
+        break;
+      }
       case 'armchair':
         box3(g, w, 40, d, 0, 0, 0, 'sofa'); box3(g, w - 20, 10, d - 22, 0, 40, 6, 'cushion');
         box3(g, w, 42, 16, 0, 40, -d / 2 + 8, 'sofa'); box3(g, 10, 20, d, -w / 2 + 5, 40, 0, 'sofa'); box3(g, 10, 20, d, w / 2 - 5, 40, 0, 'sofa');
@@ -299,10 +350,14 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         tube.material.side = T.DoubleSide; tube.rotation.x = Math.PI / 2; tube.position.y = w / 2; tube.castShadow = true; g.add(tube);
         break;
       }
-      case 'kiosk':
-        box3(g, w, 75, d, 0, 0, 0, 'kiosk'); box3(g, w * 0.7, 45, 8, 0, 80, -d / 2 + 12, 'white');
-        box3(g, w * 0.6, 32, 2, 0, 86, -d / 2 + 17, 'glassdark', false);
+      case 'kiosk': {
+        box3(g, w, 75, d, 0, 0, 0, 'kiosk');
+        const cuff = new T.Mesh(new T.TorusGeometry(18, 4, 10, 28, Math.PI * 1.25), mat('chrome'));   // 量血壓機個圈
+        cuff.position.set(w / 4, 95, 0); g.add(cuff);
+        box3(g, w * 0.4, 45, 8, -w / 5, 80, -d / 2 + 12, 'white');
+        box3(g, w * 0.34, 32, 2, -w / 5, 86, -d / 2 + 17, 'glassdark', false);
         break;
+      }
       case 'playmat': {
         const nx = 4, nz = 3, tw = w / nx, td = d / nz, cols = ['#F2C14E', '#7FB8E0', '#F08A7E', '#8FCB8A', '#C9A3E0', '#F6B26B'];
         const tiles = [];
@@ -385,7 +440,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
   };
   // 一層嘅模型：地板（上層有樓梯井）、樓板、牆、傢俬、天花（下層喺樓梯位開窿）
   function buildRoot(fl, H) {
-    const plan = plans[fl.id], root = new T.Group();
+    const plan = plans[fl.id], root = new T.Group(), ceilItems = [];
     const floorHoles = SG && SG.upper.floor === fl.id ? [SG.hole] : [];
     const ceilHoles = SG && SG.lower.floor === fl.id ? [SG.footprint] : [];
     plan.rooms.forEach(r => {
@@ -399,11 +454,12 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
     walls3D(root, H, plan);
     plan.items.forEach(it => {
       const f = furniture3D(it, H, plan);
-      if (f) { f.traverse(o => { if (o.isMesh) { o.castShadow = o.material !== M.glass; o.receiveShadow = true; } }); root.add(f); }
+      if (f) { f.traverse(o => { if (o.isMesh) { o.castShadow = o.material !== M.glass && !f.userData.ceil; o.receiveShadow = true; } }); if (f.userData.ceil) ceilItems.push(f); else root.add(f); }
     });
     if (floorHoles.length) root.add(stairRailing());
     if (H >= WALL_H) {
       const ceil = new T.Group();
+      ceilItems.forEach(f => ceil.add(f));
       plan.rooms.forEach(r => { const m = new T.Mesh(new T.ShapeGeometry(shapeOf(r.pts, ceilHoles)), mat('ceiling')); m.rotation.x = -Math.PI / 2; m.position.y = WALL_H; ceil.add(m); });
       ceil.userData.noPick = true; root.add(ceil); root.userData.ceiling = ceil;
     }

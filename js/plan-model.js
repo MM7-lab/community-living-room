@@ -67,6 +67,17 @@ export const CATALOG = {
   rug: { w: 290, d: 200, ht: 1, sym: 'rug', name: '地氈' },
   play_tunnel: { w: 60, d: 185, ht: 60, sym: 'tunnel', name: '遊戲隧道' },
   health_kiosk: { w: 100, d: 60, ht: 130, sym: 'kiosk', name: '健康站（量度機）' },
+  dining_table: { w: 165, d: 85, ht: 75, sym: 'table', name: '餐枱' },
+  arch_partition: { w: 200, d: 12, ht: 255, sym: 'arch', name: '拱門屏風' },
+  // 裝飾（deco）：唔擋路、唔檢查撞位
+  upper_cabinet: { w: 100, d: 35, ht: 100, sym: 'upper', name: '吊櫃', deco: true },
+  ring_light: { w: 120, d: 120, ht: 4, sym: 'ring', name: '圓形吊燈', deco: true },
+  acoustic_green: { w: 90, d: 3, ht: 90, sym: 'acoustic', name: '吸音板', deco: true },
+  acoustic_blue: { w: 90, d: 3, ht: 90, sym: 'acoustic', name: '吸音板', deco: true },
+  kiosk_wall: { w: 70, d: 10, ht: 240, sym: 'kioskwall', name: '自助服務機（牆身）', deco: true },
+  baffle_ceiling: { w: 300, d: 300, ht: 1, sym: 'baffle', name: '黑色格柵天花', deco: true },
+  handrail: { w: 110, d: 6, ht: 95, sym: 'rail', name: '扶手' },
+  platform: { w: 120, d: 150, ht: 29, sym: 'platform', name: '兩級台階' },
   stairs: { w: 120, d: 480, ht: 350, sym: 'stairs', name: '樓梯', internal: true }, // 由設施 "stairs" 自動產生
 };
 export const FURNITURE_TYPES = Object.keys(CATALOG).filter(k => CATALOG[k].name && !CATALOG[k].internal);
@@ -225,7 +236,7 @@ export function collisionData(plan) {
   });
   // 柱一定擋路；其他傢俬高過 30 cm 先擋（地氈之類唔擋）。
   const rects = plan.items
-    .filter(it => !OPENING_TYPES.has(it.type) && (it.type === 'column' || elev(it, plan) + heightOf(it) >= 30))
+    .filter(it => !OPENING_TYPES.has(it.type) && !CATALOG[it.type]?.deco && (it.type === 'column' || elev(it, plan) + heightOf(it) >= 30))
     .map(it => ({ x: it.x, y: it.y, w: it.w, h: it.h, r: it.r || 0 }));
   return { segs, rects };
 }
@@ -438,7 +449,7 @@ export function furnitureProblems(plan, facilities, obstacles = []) {
   const axes = it => { const a = rad(it.r || 0); return [[Math.cos(a), Math.sin(a)], [-Math.sin(a), Math.cos(a)]]; };
   const hit = (A, B) => { const ca = corners(A), cb = corners(B); for (const ax of [...axes(A), ...axes(B)]) { const pa = ca.map(c => c.x * ax[0] + c.y * ax[1]), pb = cb.map(c => c.x * ax[0] + c.y * ax[1]); if (Math.max(...pa) + 1 <= Math.min(...pb) || Math.max(...pb) + 1 <= Math.min(...pa)) return false; } return true; };
   const flat = it => heightOf(it) < 10;
-  const mine = facilities.flatMap(f => (f.furniture || []).map(it => ({ it, f })));
+  const mine = facilities.flatMap(f => (f.furniture || []).filter(it => !CATALOG[it.type]?.deco).map(it => ({ it, f })));
   mine.forEach(({ it, f }, k) => {
     const label = `「${f.name}」嘅 ${CATALOG[it.type].name || it.type}`; // 地墊、地氈上面擺嘢唔當疊埋
     let wall = false, outside = false;
@@ -450,7 +461,7 @@ export function furnitureProblems(plan, facilities, obstacles = []) {
     if (outside) out.push(`${label}出咗平面圖外框。`);
     else if (wall) out.push(`${label}撞到牆。`);
     plan.items.forEach(o => {
-      if (o.type === 'window' || o.type === 'tv') return;
+      if (o.type === 'window' || o.type === 'tv' || CATALOG[o.type]?.deco) return;
       const isDoor = o.type === 'door' || o.type === 'door2';
       if ((isDoor || o.type === 'column' || (!flat(it) && !flat(o))) && hit(it, o)) out.push(`${label}${isDoor ? '擋住咗門口' : '撞到原有傢俬'}。`);
     });
