@@ -413,6 +413,8 @@ export function normalizeCenter(raw, plans) {
       staffOnly: f.staffOnly === true, tentative: f.tentative === true, highlight: f.highlight === true, at: at || { x: 0, y: 0 }, area, radius: isNum(f.radius) ? +f.radius : 150, view, color,
       floor, stairs,
       // 設備同使用規矩：type 對應 3D 入面嘅傢俬類型（撳件嘢會跳去呢項）
+      // 有得借（borrow）、有咩服務（services）：可以寫字串或者 {icon, name, note}
+      ...Object.fromEntries(['borrow', 'services'].map(k => [k, (Array.isArray(f[k]) ? f[k] : []).map(o => typeof o === 'string' ? { icon: '', name: str(o, 40), note: '' } : { icon: str(o?.icon, 8), name: str(o?.name, 40), note: str(o?.note, 120) }).filter(o => o.name).slice(0, 12)])),
       main: f.main === true,
       // 三步卡：點樣用（最多 5 步）；stepsNote 可以寫「草稿，待確認」之類
       steps: (Array.isArray(f.steps) ? f.steps : []).map(x => typeof x === 'string' ? { icon: '', text: str(x, 120) } : { icon: str(x?.icon, 8), text: str(x?.text, 120) }).filter(x => x.text).slice(0, 5),

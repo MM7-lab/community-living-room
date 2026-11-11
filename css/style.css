@@ -407,3 +407,10 @@ h1, h2, h3, p { margin: 0; }
 .steps li { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: #FFF1E0; font-size: 18px; font-weight: 700; line-height: 1.35; }
 .step-n { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; font-size: 18px; }
 .step-i { font-size: 24px; }
+/* 有得借／有咩服務 */
+.card-offers { margin-top: 14px; }
+.card-offers h3 { font-size: 18px; font-weight: 800; margin: 10px 0 8px; }
+.offers { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.offers li { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 14px; background: #EEF6EE; font-size: 17px; }
+.offers li > span:first-child { font-size: 24px; }
+.offers small { display: block; font-size: 15px; color: var(--muted); font-weight: 400; }

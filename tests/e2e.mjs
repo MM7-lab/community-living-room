@@ -293,6 +293,7 @@ await check('首頁「我想……」帶去設施，資料卡有三步卡；地�
     await h.page.waitForSelector('#card:not([hidden])');
     assert.ok((await h.page.textContent('#card-title')).includes('洗衣'));
     assert.equal(await h.page.locator('#card-steps .steps li').count(), 3, '洗衣冇三步卡');
+    assert.equal(await h.page.locator('#info-btn, #info').count(), 0, '「資料」版應該已經刪走');
     await sleep(1200); await h.page.screenshot({ path: join(OUT, '00b-steps.png') });
     await h.page.click('#card .close-btn'); await h.page.click('#btn-reset'); await sleep(2500);
     const st = await h.page.evaluate(() => window.__clr.S.view.pinState());
@@ -343,20 +344,6 @@ await ctx.close();
     const t = await page.textContent('#fatal');
     assert.ok(/第 3 行/.test(t), `錯誤訊息冇講行數：${t}`);
     await page.screenshot({ path: join(OUT, '11-data-error.png') });
-  });
-  await ctx.close();
-}
-
-/* ---------- 資料（關於）頁 ---------- */
-{
-  const { ctx, page } = await openPage(phone);
-  await check('「資料」頁有使用說明', async () => {
-    await page.click('#info-btn');
-    await page.waitForSelector('#info:not([hidden])');
-    await sleep(600);
-    const t = await page.textContent('#info');
-    assert.ok(t.includes('點樣用') && t.includes('漫遊'));
-    await page.screenshot({ path: join(OUT, '12-info.png') });
   });
   await ctx.close();
 }

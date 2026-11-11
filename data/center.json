@@ -57,6 +57,8 @@
       "floor": "G",
       "at": [137, 1470],
       "radius": 110,
+      "borrow": [{"icon": "🔋", "name": "尿袋（流動充電器）", "note": "借用方法待補"}],
+      "services": [{"icon": "💻", "name": "電腦", "note": "將會擺喺咖啡枱上面，使用安排待補"}],
       "furniture": [
         {"type": "coffee_bar", "dx": -117, "dy": 45, "w": 100, "d": 60, "r": 270},
         {"type": "bar_counter", "dx": 35, "dy": 73, "w": 235, "d": 40},
@@ -78,6 +80,7 @@
       "floor": "G",
       "at": [-216, 1411],
       "radius": 110,
+      "borrow": [{"icon": "🎲", "name": "Board game（桌上遊戲）", "note": "借用方法待補"}],
       "people": [
         {"role": "當值同事", "icon": "🙋", "intro": ""}
       ],

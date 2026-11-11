@@ -16,7 +16,6 @@
     <div class="brand-text"><h1 id="title">社區客廳</h1><p id="subtitle">3D 導覽地圖</p></div>
   </div>
   <button type="button" class="top-btn primary" id="btn-wants" hidden>🙋 我想…</button>
-  <button type="button" class="top-btn" id="info-btn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 10.5v6.5M12 7.2v.1" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>資料</button>
 </header>
 <p class="draft" id="draft" hidden></p>
 
@@ -116,6 +115,7 @@
       <p class="card-summary" id="card-summary"></p>
       <section class="card-steps" id="card-steps" hidden></section>
       <dl class="card-rows" id="card-rows"></dl>
+      <section class="card-offers" id="card-offers" hidden></section>
       <section class="card-people" id="card-people" hidden></section>
       <section class="card-equip" id="card-equip" hidden></section>
       <div class="card-actions">
@@ -123,14 +123,6 @@
         <button type="button" class="btn" data-act="showplan">喺平面圖睇</button>
       </div>
     </div>
-  </article>
-</div>
-
-<div class="sheet" id="info" hidden>
-  <div class="sheet-backdrop" data-close></div>
-  <article class="sheet-panel info" role="dialog" aria-modal="true" aria-labelledby="info-title">
-    <button type="button" class="close-btn" data-close aria-label="關閉">✕</button>
-    <div class="info-body" id="info-body"></div>
   </article>
 </div>
 

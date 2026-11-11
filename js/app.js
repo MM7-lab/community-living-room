@@ -58,25 +58,6 @@ function renderShell() {
   const seg = $('#floor-seg');
   seg.innerHTML = S.floors.map(fl => `<button type="button" data-floor="${esc(fl.id)}" aria-pressed="${fl.id === S.floor}">${esc(fl.name)}</button>`).join('');
   seg.addEventListener('click', e => { const b = e.target.closest('[data-floor]'); if (b) { S.view?.setFloor(b.dataset.floor); if (!S.view) setFloorUI(b.dataset.floor); } });
-
-  const rows = [
-    center.address && ['📍 地址', esc(center.address)],
-    center.phone && ['📞 查詢電話', `<a href="tel:${esc(center.phone.replace(/[^\d+]/g, ''))}">${esc(center.phone)}</a>`],
-  ].filter(Boolean);
-  $('#info-body').innerHTML = `<h2 id="info-title">${esc(center.name)}</h2>
-    ${center.subtitle ? `<p class="info-sub">${esc(center.subtitle)}</p>` : ''}
-    ${rows.length ? `<dl class="card-rows">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>` : ''}
-    ${center.note ? `<p>${esc(center.note)}</p>` : ''}
-    <h3>點樣用</h3>
-    <ul class="howto">
-      <li><b>3D 地圖</b>：撳彩色圖示睇設施資料；一指拖動轉角度，兩指放大縮細。</li>
-      <li><b>自動導覽</b>：由入口開始，逐個設施介紹，可以暫停同跳過。</li>
-      <li><b>漫遊</b>：好似自己行入去咁。手機用畫面上嘅掣，電腦用 W A S D 鍵同方向鍵。</li>
-      <li><b>平面圖</b>：由上面望落嚟嘅圖，數字同設施列表一樣。</li>
-      ${S.floors.length > 1 ? `<li><b>樓層</b>：撳「${esc(S.floors.map(x => x.name).join('／'))}」轉層；漫遊時行入樓梯口會自動上落樓。</li>` : ''}
-    </ul>
-    ${center.planNote ? `<p class="muted">${esc(center.planNote)}</p>` : ''}
-    ${S.data.updated ? `<p class="muted">資料更新：${esc(S.data.updated)}</p>` : ''}`;
 }
 
 
@@ -157,6 +138,10 @@ function openCard(fid, itemType = null) {
       ${e.note ? `<p class="eq-note">${esc(e.note)}</p>` : ''}
       ${e.rules.length ? `<ol>${e.rules.map(r => `<li>${esc(r)}</li>`).join('')}</ol>` : '<p class="pending">使用規矩稍後補上。</p>'}
     </details>`).join('') : '';
+  // 有得借／有咩服務
+  const of = $('#card-offers'), chip = o => `<li><span aria-hidden="true">${esc(o.icon || '•')}</span><span><strong>${esc(o.name)}</strong>${o.note ? `<small>${esc(o.note)}</small>` : ''}</span></li>`;
+  of.hidden = !(f.borrow.length || f.services.length);
+  of.innerHTML = (f.borrow.length ? `<h3>🤝 有得借</h3><ul class="offers">${f.borrow.map(chip).join('')}</ul>` : '') + (f.services.length ? `<h3>✨ 有咩服務</h3><ul class="offers">${f.services.map(chip).join('')}</ul>` : '');
   // 同事介紹（例如接待處）：只寫職位／稱呼同一兩句介紹，唔放相、唔放私人聯絡
   const pp = $('#card-people');
   pp.hidden = !f.people.length;
@@ -202,7 +187,6 @@ document.addEventListener('keydown', e => {
   const open = [...document.querySelectorAll('.sheet')].find(s => !s.hidden);
   if (open) { e.preventDefault(); closeSheet(open); }
 });
-$('#info-btn').addEventListener('click', () => openSheet('#info'));
 
 /* ---------- 功能切換 ---------- */
 function setTab(tab, { push = true } = {}) {
