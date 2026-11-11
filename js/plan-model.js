@@ -90,6 +90,7 @@ export const CATALOG = {
   // 廚房（按現場相片）
   loveseat: { w: 150, d: 80, ht: 85, sym: 'sofa', name: '細梳化' },
   slat_wall: { w: 330, d: 4, ht: 240, sym: 'slatwall', name: '木條牆', deco: true },
+  study_table: { w: 140, d: 60, ht: 75, sym: 'table', name: '自修枱' },
   counter: { w: 150, d: 60, ht: 90, sym: 'counter', name: '工作枱' },
   island: { w: 290, d: 120, ht: 90, sym: 'island', name: '中島工作枱' },
   fridge_black: { w: 60, d: 62, ht: 125, sym: 'fridge', name: '雪櫃（黑色）' },
@@ -412,6 +413,7 @@ export function normalizeCenter(raw, plans) {
       staffOnly: f.staffOnly === true, tentative: f.tentative === true, highlight: f.highlight === true, at: at || { x: 0, y: 0 }, area, radius: isNum(f.radius) ? +f.radius : 150, view, color,
       floor, stairs,
       // 設備同使用規矩：type 對應 3D 入面嘅傢俬類型（撳件嘢會跳去呢項）
+      people: (Array.isArray(f.people) ? f.people : []).filter(p => p && str(p.role, 40)).slice(0, 12).map(p => ({ role: str(p.role, 40), name: str(p.name, 30), icon: str(p.icon, 8), intro: str(p.intro, 300) })),
       equipment: (Array.isArray(f.equipment) ? f.equipment : []).filter(e => e && str(e.name, 60)).slice(0, 40).map(e => ({
         type: str(e.type, 40), name: str(e.name, 60), icon: str(e.icon, 8), note: str(e.note, 200),
         rules: (Array.isArray(e.rules) ? e.rules : []).map(r => str(r, 200)).filter(Boolean).slice(0, 12),

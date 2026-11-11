@@ -152,12 +152,6 @@ f.wall((475,845), (475,1565)); f.door((475,845), (475,1565), 15, 90, E); f.door(
 f.wall((475,1380), (600,1380))
 f.window((-45,1565), (600,1565), 45, 510)
 f.item('column', -27, 765, 35, 170); f.item('column', -25, 1540, 40, 50); f.item('column', 575, 1545, 50, 40)
-# 辦公室（枱椅由使用者提供）
-for (x, y, r) in ((20, 65, 0), (130, 65, 0), (25, 330, 270), (25, 455, 270), (215, 330, 90), (215, 455, 90)):
-    f.item('desk', x, y, 100, 60, r)
-f.item('printer', 130, 180, 75, 75, 0)
-# 多用途室：長枱同 6 張椅
-f.item('meeting', 230, 1393, 270, 95, 0)
-for x in (140, 230, 320): f.item('chair', x, 1318, 50, 50, 180); f.item('chair', x, 1468, 50, 50, 0)
+# 辦公室唔對外開放：唔畫傢俬。兩間活動室嘅擺設喺 data/center.json（自修室、自由空間）。
 f.dump(os.path.join(ROOT, 'data/plan-1f.json'), '一樓平面圖：由竣工平面圖（Yuen Fat，2024-06-27，1:100）描繪，單位 cm，約 ±10 cm。x = 0 係 E 軸線，y = 0 係後牆。')
 print('G items', len(g.items), 'walls', len(g.walls), '| 1F items', len(f.items), 'walls', len(f.walls))

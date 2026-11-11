@@ -38,7 +38,8 @@ test('設施資料冇錯：入口第一站、官方 8 項齊晒、分兩層', ()
     const pl = plans[f.floor === 'all' ? 'G' : f.floor];
     assert.ok(insideBuilding(pl, f.at), `${f.name} 喺嗰層平面圖外面`);
   });
-  assert.equal(d.facilities.find(f => f.id === 'kids').floor, '1F', '兒童遊樂室應該喺一樓 Play Room');
+  ['study', 'free'].forEach(id => assert.equal(d.facilities.find(f => f.id === id).floor, '1F', `${id} 應該喺一樓`));
+  assert.equal(plans['1F'].items.some(i => i.type === 'desk' || i.type === 'printer'), false, '一樓辦公室傢俬唔應該顯示');
 });
 
 test('平面圖冇同事名或者任何標籤', () => {
@@ -99,7 +100,7 @@ test('撳平面圖揀設施：點優先，再睇範圍，淨係揀同一層', ()
   assert.equal(facilityAt(G, { x: 520, y: 120 })?.id, 'toilets');
   assert.equal(facilityAt(G, { x: 537, y: 1300 })?.id, 'stairs');
   assert.equal(facilityAt(F1, { x: 537, y: 1300 })?.id, 'stairs', '樓梯兩層都有');
-  assert.equal(facilityAt(F1, { x: 100, y: 800 })?.id, 'kids');
+  assert.equal(facilityAt(F1, { x: 100, y: 800 })?.id, 'study');
   assert.equal(facilityAt(G, { x: -330, y: 1290 }), null, '地下呢個位冇設施（一樓先有兒童遊樂室）');
 });
 
@@ -119,7 +120,7 @@ test('資料檢查：常見錯誤有清楚中文提示', () => {
 
 test('設施傢俬同樓梯：每層都冇撞牆、冇撞嘢、冇擋門', () => {
   const d = normalizeCenter(center, plans);
-  ['coffee', 'kids', 'play'].forEach(id => assert.ok(d.facilities.find(f => f.id === id).furniture.length > 0, `${id} 冇傢俬`));
+  ['coffee', 'study', 'play'].forEach(id => assert.ok(d.facilities.find(f => f.id === id).furniture.length > 0, `${id} 冇傢俬`));
   assert.deepEqual(allFurnitureProblems(plans, d), []);
 });
 
@@ -134,7 +135,7 @@ test('平面圖原有傢俬：冇撞牆、冇擋門、冇疊埋', () => {
 
 test('設施傢俬：放錯位會俾檢查捉到（撞牆、擋門、擋樓梯）', () => {
   const bad = JSON.parse(JSON.stringify(center));
-  const kids = bad.facilities.find(f => f.id === 'kids');
+  const kids = bad.facilities.find(f => f.id === 'study');
   kids.furniture[0].dx -= 260;                                  // 一樓：遊戲地墊推出外牆
   kids.furniture.push({ type: 'sofa', dx: 260, dy: 250 });      // 一樓：擋住多用途室門
   bad.facilities.find(f => f.id === 'coffee').furniture.push({ type: 'sofa', dx: 400, dy: -250, w: 100 }); // 地下：擋住樓梯

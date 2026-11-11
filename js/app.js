@@ -157,6 +157,10 @@ function openCard(fid, itemType = null) {
       ${e.note ? `<p class="eq-note">${esc(e.note)}</p>` : ''}
       ${e.rules.length ? `<ol>${e.rules.map(r => `<li>${esc(r)}</li>`).join('')}</ol>` : '<p class="pending">使用規矩稍後補上。</p>'}
     </details>`).join('') : '';
+  // 同事介紹（例如接待處）：只寫職位／稱呼同一兩句介紹，唔放相、唔放私人聯絡
+  const pp = $('#card-people');
+  pp.hidden = !f.people.length;
+  pp.innerHTML = f.people.length ? '<h3>邊個可以幫你</h3>' + f.people.map(p => `<div class="person"><span class="person-i" aria-hidden="true">${esc(p.icon || '🙂')}</span><div><strong>${esc(p.name ? p.name + '・' + p.role : p.role)}</strong><p${p.intro ? '' : ' class="pending"'}>${esc(p.intro || '自我介紹稍後補上。')}</p></div></div>`).join('') : '';
   openSheet('#card');
   const hit = itemType && eq.querySelector('details[open]');
   if (hit) setTimeout(() => hit.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 350);
@@ -296,6 +300,12 @@ $('#btn-walls').addEventListener('click', e => {
   e.currentTarget.setAttribute('aria-pressed', on);
   e.currentTarget.textContent = on ? '改返矮牆' : '顯示完整牆身';
   S.view?.setFullWalls(on);
+});
+$('#btn-labels').addEventListener('click', e => {
+  const off = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+  e.currentTarget.setAttribute('aria-pressed', off);
+  e.currentTarget.textContent = off ? '顯示標記' : '隱藏標記';
+  $('#view-3d').classList.toggle('labels-off', off);   // 隱藏之後仍然可以撳 3D 模型睇資料
 });
 $('#btn-reset').addEventListener('click', () => S.view?.resetView());
 
