@@ -363,3 +363,11 @@ h1, h2, h3, p { margin: 0; }
 .pin.hi { box-shadow: 0 0 0 3px #F2B33B, 0 4px 14px rgba(62, 43, 32, .3); }
 .frow.is-hi { box-shadow: inset 0 0 0 3px #F2B33B; }
 .p-area.hi { fill-opacity: .26; stroke-opacity: .9; stroke-dasharray: none; stroke-width: 3; }
+/* 手機：標記細啲，地圖唔會咁迫（字仍然 15px 以上） */
+@media (max-width: 640px) {
+  .pin { min-height: 36px; gap: 4px; padding: 3px 10px 3px 3px; border-width: 2.5px; font-size: 15px; margin-top: -7px; }
+  .pin-i { width: 27px; height: 27px; font-size: 16px; }
+  .pin.compact { padding: 3px; }
+  .pin::after { width: 10px; height: 10px; margin-left: -5px; bottom: -7px; }
+  .pin.hi { box-shadow: 0 0 0 2.5px #F2B33B, 0 3px 10px rgba(62, 43, 32, .25); }
+}

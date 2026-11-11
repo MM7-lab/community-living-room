@@ -621,9 +621,14 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
       if (show) {
         const rect = (cx, w, bottom) => [cx - w / 2 - 3, bottom - p.fh - 3, cx + w / 2 + 3, bottom + 3];
         let r = rect(x, p.fw, y);
-        if (p.f.id !== hi && !(p.f.highlight && !hi) && overlaps(r)) {
+        if (p.f.id !== hi && overlaps(r)) {
           compact = true;
-          const cands = [rect(x, p.cw, y)];
+          // 由真正位置一圈圈向外搵最近嘅空位（每圈 12 個方向），拉線就唔會拉得太遠
+          const cands = [rect(x, p.cw, y)], step = Math.max(14, p.cw * 0.45);
+          for (let k = 1; k <= 14; k++) for (let a = 0; a < 12; a++) {
+            const t = a * Math.PI / 6 + (k % 2) * Math.PI / 12;
+            cands.push(rect(x + Math.cos(t) * step * k, p.cw, y + Math.sin(t) * step * k));
+          }
           placed.forEach(q => {
             cands.push(rect(q[2] + p.cw / 2 + 4, p.cw, y), rect(q[0] - p.cw / 2 - 4, p.cw, y), rect(x, p.cw, q[1] - 4), rect(x, p.cw, q[3] + p.fh + 4));
           });
@@ -631,7 +636,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
             .sort((a, c) => Math.hypot((a[0] + a[2]) / 2 - x, a[3] - y) - Math.hypot((c[0] + c[2]) / 2 - x, c[3] - y));
           r = free[0] || cands[0];
           const nx = (r[0] + r[2]) / 2, ny = r[3] - 3;
-          shifted = Math.hypot(nx - x, ny - y) > 2; x = nx; y = ny;
+          shifted = Math.hypot(nx - x, ny - y) > 18; x = nx; y = ny;   // 郁少少就唔使拉線
         }
         placed.push(r);
       }
@@ -730,6 +735,9 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
   function overviewPose() {
     const pts = [], y0 = baseOf(floor);
     plans[floor].rooms.forEach(r => r.pts.forEach(p => { pts.push(V(p.x, y0, p.y), V(p.x, y0 + LOW_H, p.y)); }));
+    // 手機直向：由較高角度望落嚟、唔打斜，成座樓填滿畫面，標記之間多啲位
+    const portrait = (canvasHost.clientWidth || 1) / (canvasHost.clientHeight || 1) < 0.85;
+    if (portrait) return fitPose(pts, V(cx, y0, cz), dirOf(0, 1, rad(72)), { x: 0.94, top: 0.8, bottom: -0.95 });
     return fitPose(pts, V(cx, y0, cz), dirOf(Math.sin(rad(-12)), Math.cos(rad(-12)), rad(58)), { x: 0.9, top: 0.72, bottom: -0.9 });
   }
   // 導覽每一站：由大廳中間望向設施（或者按 center.json 嘅 view），包住設施範圍同標記，唔俾字卡遮住。
