@@ -1,5 +1,5 @@
 // 社區客廳 3D 導覽地圖：載入資料、切換功能、資料卡。
-import { normalizePlan, normalizeCenter, withFurniture, DataError } from './plan-model.js';
+import { normalizePlan, normalizeFloors, normalizeCenter, withFurniture, facilitiesOn, stairsGeometry, DataError } from './plan-model.js';
 import { createPlan2D, esc } from './plan2d.js';
 import { loadThree, hasWebGL, createView3D } from './view3d.js';
 
@@ -46,14 +46,18 @@ function renderShell() {
 
   $('#flist').innerHTML = facilities.map(f => `<li><button type="button" class="frow" data-fid="${esc(f.id)}" style="--c:${f.color}">
       <span class="frow-n">${f.no}</span><span class="frow-i" aria-hidden="true">${esc(f.icon)}</span>
-      <span class="frow-main"><span class="frow-name">${esc(f.name)}${f.staffOnly ? ' <span class="tag">職員專用</span>' : ''}${f.tentative ? ' <span class="tag soft">位置暫定</span>' : ''}</span>
+      <span class="frow-main"><span class="frow-name">${esc(f.name)}${floorTag(f)}${f.staffOnly ? ' <span class="tag">職員專用</span>' : ''}${f.tentative ? ' <span class="tag soft">位置暫定</span>' : ''}</span>
       <span class="frow-sum">${esc(f.summary || '簡介稍後補上')}</span>
       <span class="frow-hours">🕒 ${esc(f.hours || f.booking || '開放時間稍後補上')}</span></span>
       <span class="frow-go" aria-hidden="true">›</span></button></li>`).join('');
   $('#flist').addEventListener('click', e => { const b = e.target.closest('[data-fid]'); if (b) openCard(b.dataset.fid); });
 
-  S.plan2d = createPlan2D({ host: $('#view-plan'), plan: S.plan, facilities, onPick: openCard });
+  S.plan2d = createPlans();
   debug.plan2d = S.plan2d;
+  // 3D 轉層掣
+  const seg = $('#floor-seg');
+  seg.innerHTML = S.floors.map(fl => `<button type="button" data-floor="${esc(fl.id)}" aria-pressed="${fl.id === S.floor}">${esc(fl.name)}</button>`).join('');
+  seg.addEventListener('click', e => { const b = e.target.closest('[data-floor]'); if (b) { S.view?.setFloor(b.dataset.floor); if (!S.view) setFloorUI(b.dataset.floor); } });
 
   const rows = [
     center.address && ['📍 地址', esc(center.address)],
@@ -69,9 +73,59 @@ function renderShell() {
       <li><b>自動導覽</b>：由入口開始，逐個設施介紹，可以暫停同跳過。</li>
       <li><b>漫遊</b>：好似自己行入去咁。手機用畫面上嘅掣，電腦用 W A S D 鍵同方向鍵。</li>
       <li><b>平面圖</b>：由上面望落嚟嘅圖，數字同設施列表一樣。</li>
+      ${S.floors.length > 1 ? `<li><b>樓層</b>：撳「${esc(S.floors.map(x => x.name).join('／'))}」轉層；漫遊時行入樓梯口會自動上落樓。</li>` : ''}
     </ul>
     ${center.planNote ? `<p class="muted">${esc(center.planNote)}</p>` : ''}
     ${S.data.updated ? `<p class="muted">資料更新：${esc(S.data.updated)}</p>` : ''}`;
+}
+
+
+/* ---------- 樓層 ---------- */
+const floorName = id => (id === 'all' ? S.floors.map(x => x.name).join('／') : S.floors.find(x => x.id === id)?.name || '');
+const floorOfF = f => (f.floor === 'all' ? S.floor : f.floor);
+const floorTag = f => (S.floors.length > 1 ? ` <span class="tag floor">${esc(floorName(f.floor))}</span>` : '');
+function setFloorUI(id) {
+  S.floor = id;
+  document.querySelectorAll('#floor-seg [data-floor]').forEach(b => b.setAttribute('aria-pressed', b.dataset.floor === id));
+  $('#walk-floor').textContent = `你喺：${floorName(id)}`;
+  S.plan2d?.show(id);
+}
+// 每層一張 2D 平面圖，上面有轉層掣
+function createPlans() {
+  const host = $('#view-plan'), multi = S.floors.length > 1;
+  const sf = S.data.facilities.find(f => f.stairs), sg = sf ? stairsGeometry(sf) : null;
+  host.innerHTML = (multi ? `<div class="plan-floors" role="tablist" aria-label="樓層">${S.floors.map(x => `<button type="button" role="tab" data-pfloor="${esc(x.id)}" aria-selected="${x.id === S.floor}">${esc(x.name)}</button>`).join('')}</div>` : '')
+    + S.floors.map(x => `<div class="plan-floor" data-floor-host="${esc(x.id)}"${x.id === S.floor ? '' : ' hidden'}></div>`).join('');
+  const inst = {};
+  S.floors.forEach(x => {
+    const role = sg ? (sg.lower.floor === x.id ? 'lower' : sg.upper.floor === x.id ? 'upper' : null) : null;
+    inst[x.id] = createPlan2D({ host: host.querySelector(`[data-floor-host="${CSS.escape(x.id)}"]`), plan: S.plans[x.id], facilities: facilitiesOn(S.data.facilities, x.id), onPick: openCard, stairs: role ? sg : null, stairsRole: role });
+  });
+  let cur = S.floor;
+  const api = {
+    show(id) {
+      if (!inst[id]) return;
+      cur = id;
+      host.querySelectorAll('[data-floor-host]').forEach(el => { el.hidden = el.dataset.floorHost !== id; });
+      host.querySelectorAll('[data-pfloor]').forEach(b => b.setAttribute('aria-selected', b.dataset.pfloor === id));
+      inst[id].layout();
+    },
+    layout: () => inst[cur].layout(),
+    highlight(fid) {
+      const f = S.data.facilities.find(x => x.id === fid);
+      if (f && f.floor !== 'all' && f.floor !== cur) api.show(f.floor);
+      Object.values(inst).forEach(p => p.highlight(fid));
+    },
+    setMe(x, y, yaw, floor) { Object.entries(inst).forEach(([id, p]) => (id === floor ? p.setMe(x, y, yaw) : p.setMe(null))); },
+    pinPercent: fid => { const f = S.data.facilities.find(x => x.id === fid); return f ? inst[floorOfF(f)].pinPercent(fid) : null; },
+    get floor() { return cur; },
+  };
+  host.addEventListener('click', e => {
+    const b = e.target.closest('[data-pfloor]'); if (!b) return;
+    api.show(b.dataset.pfloor);
+    if (S.view) S.view.setFloor(b.dataset.pfloor, { fly: false }); else setFloorUI(b.dataset.pfloor);
+  });
+  return api;
 }
 
 /* ---------- 資料卡 ---------- */
@@ -87,12 +141,14 @@ function openCard(fid) {
     : `<div class="ph-empty"><span aria-hidden="true">${esc(f.icon)}</span><small>相片稍後補上</small></div>`;
   const img = ph.querySelector('img');
   if (img) img.addEventListener('error', () => { ph.innerHTML = `<div class="ph-empty"><span aria-hidden="true">${esc(f.icon)}</span><small>相片暫時睇唔到</small></div>`; }, { once: true });
-  $('#card-kicker').innerHTML = `<span class="num" style="--c:${f.color}">${f.no}</span>設施 ${f.no} / ${S.data.facilities.length}${f.staffOnly ? '<span class="tag">職員專用</span>' : ''}${f.tentative ? '<span class="tag soft">位置暫定</span>' : ''}`;
+  $('#card-kicker').innerHTML = `<span class="num" style="--c:${f.color}">${f.no}</span>設施 ${f.no} / ${S.data.facilities.length}${floorTag(f)}${f.staffOnly ? '<span class="tag">職員專用</span>' : ''}${f.tentative ? '<span class="tag soft">位置暫定</span>' : ''}`;
   $('#card-title').innerHTML = `<span aria-hidden="true">${esc(f.icon)}</span> ${esc(f.name)}`;
   $('#card-summary').textContent = f.summary || '簡介稍後補上。';
   $('#card-summary').classList.toggle('pending', !f.summary);
   const row = (k, v) => `<div><dt>${k}</dt><dd${v ? '' : ' class="pending"'}>${v ? esc(v) : '資料稍後補上'}</dd></div>`;
-  $('#card-rows').innerHTML = row('🕒 開放時間', f.hours) + row('📝 預約方法', f.booking);
+  $('#card-rows').innerHTML = f.stairs
+    ? `<div><dt>🪜 連接</dt><dd>${esc(S.floors.map(x => x.name).join(' ⇄ '))}</dd></div><div><dt>🚶 漫遊時</dt><dd>行入樓梯口就會上落樓</dd></div>`
+    : row('🕒 開放時間', f.hours) + row('📝 預約方法', f.booking);
   openSheet('#card');
   S.view?.highlight(fid);
   S.plan2d?.highlight(fid);
@@ -119,7 +175,7 @@ document.addEventListener('click', e => {
     closeSheet($('#card'));
     if (a.dataset.act === 'show3d') { setTab('3d'); S.view?.focus(fid); S.plan2d.highlight(fid); }
     if (a.dataset.act === 'showplan') {
-      setTab('plan'); S.plan2d.highlight(fid);
+      setTab('plan'); S.plan2d.show(floorOfF(S.data.facilities.find(x => x.id === fid))); S.plan2d.highlight(fid);
       document.querySelector(`.ppin[data-fid="${CSS.escape(fid)}"]`)?.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
     }
   }
@@ -152,6 +208,8 @@ function applyMode(restartTour) {
   $('#tourbar').hidden = !(ready && tab === 'tour');
   $('#walkui').hidden = !(ready && tab === 'walk');
   $('#v3-tools').hidden = !(ready && tab === '3d');
+  $('#floor-seg').hidden = !(ready && tab === '3d' && S.floors.length > 1);
+  $('#walk-floor').hidden = S.floors.length < 2;
   if (!ready) return;
   v.setActive(in3d);
   if (!in3d) { if (v.mode === 'tour') v.tour.pause(); return; }
@@ -200,11 +258,17 @@ async function init3D() {
   try {
     S.view = createView3D({
       canvasHost: $('#v3-canvas'), pinHost: $('#v3-pins'), minimap: $('#minimap'),
-      plan: S.plan, facilities: S.data.facilities, start: S.data.start,
-      obstacles: [...document.querySelectorAll('.v3-tools button, .walkui button, .dpad, .turnpad, .minimap')],
+      plans: S.plans, floors: S.floors, facilities: S.data.facilities, start: S.data.start,
+      obstacles: [...document.querySelectorAll('.v3-tools button, .floor-seg, .walkui button, .dpad, .turnpad, .minimap, .walk-floor')],
       onPick: fid => { if (fid) openCard(fid); },
       onTour: renderTour,
-      onWalk: p => S.plan2d.setMe(p.x, p.y, p.yaw),
+      onWalk: p => S.plan2d.setMe(p.x, p.y, p.yaw, p.floor),
+      onFloor: setFloorUI,
+      onStairs: (id, name) => {
+        const el = $('#floor-flash'), up = S.floors.findIndex(x => x.id === id) > 0;
+        el.textContent = `${up ? '⬆' : '⬇'} 你而家喺${name}`;
+        el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+      },
       onExitWalk: () => setTab('3d'),
       onMode: m => { document.body.dataset.mode = m; },
     });
@@ -235,7 +299,7 @@ function renderTour(st) {
   const done = st.phase === 'done', f = S.data.facilities[st.idx];
   $('#tour-ctrl').hidden = done; $('#tour-done').hidden = !done;
   $('#tour-more').hidden = done;
-  $('#tour-step').textContent = done ? '導覽完結' : `第 ${st.idx + 1} 站，共 ${st.total} 站`;
+  $('#tour-step').textContent = done ? '導覽完結' : `第 ${st.idx + 1} 站，共 ${st.total} 站${S.floors.length > 1 ? `・${floorName(st.floor)}` : ''}`;
   $('#tour-title').innerHTML = done ? '多謝收睇 🎉' : `<span aria-hidden="true">${esc(f.icon)}</span> ${esc(f.name)}${f.staffOnly ? ' <span class="tag">職員專用</span>' : ''}`;
   $('#tour-text').textContent = done ? '可以撳「再睇一次」，或者返去 3D 地圖自己周圍睇。' : (f.tour || f.summary || '簡介稍後補上。');
   const play = $('#tour-play');
@@ -278,14 +342,19 @@ $('#walk-hint').textContent = coarse
 /* ---------- 開始 ---------- */
 async function boot() {
   try {
-    const [p, c] = await Promise.all([getJSON('data/plan.json'), getJSON('data/center.json')]);
-    S.plan = normalizePlan(p);
-    S.data = normalizeCenter(c, S.plan);
+    const c = await getJSON('data/center.json');
+    const fl = normalizeFloors(c);
+    if (fl.errors.length) throw new DataError('樓層設定（floors）有以下問題：', fl.errors);
+    const raws = await Promise.all(fl.floors.map(x => getJSON(x.plan)));
+    const plans = {};
+    fl.floors.forEach((x, i) => { plans[x.id] = normalizePlan(raws[i]); });
+    S.data = normalizeCenter(c, plans);
     if (S.data.errors.length) throw new DataError('設施資料檔（data/center.json）有以下問題：', S.data.errors);
     S.data.warnings.forEach(w => console.warn(w));
-    S.plan = withFurniture(S.plan, S.data.facilities);
+    S.floors = S.data.floors; S.floor = S.floors[0].id;
+    S.plans = Object.fromEntries(S.floors.map(x => [x.id, withFurniture(plans[x.id], S.data.facilities, x.id)]));
   } catch (e) { showFatal(e); return; }
-  debug.data = S.data; debug.plan = S.plan;
+  debug.data = S.data; debug.plans = S.plans; debug.plan = S.plans[S.floors[0].id];
   renderShell();
   const t = location.hash.slice(1);
   setTab(TABS.includes(t) ? t : '3d', { push: false });

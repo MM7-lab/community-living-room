@@ -5,6 +5,9 @@ export const WALL_H = 270;   // 牆高（同辦公室工具一樣）
 export const LOW_H = 110;    // 「矮牆」模式，方便由上面望入去
 export const WALK_R = 22;    // 漫遊時人嘅半徑（cm）
 export const EYE_H = 155;    // 漫遊時眼睛高度（cm）
+export const FLOOR_H = 300;  // 層與層之間（天花 270 + 樓板 30）
+// U 形雙跑樓梯（樓梯本地座標：闊沿 x，長沿 y；樓梯口喺 +y 嗰邊）
+export const STAIR = { w: 210, d: 316, flight: 100, gap: 10, risers: 17, firstRisers: 9, tread: 27 };
 
 // 傢俬類型：同辦公室工具嘅清單一致（w 闊、d 深、ht 高，單位 cm）。
 export const CATALOG = {
@@ -32,7 +35,7 @@ export const CATALOG = {
   bigrect: { w: 121, d: 35, ht: 78, sym: 'cabinet' },
   roomdrawer: { w: 48, d: 60, ht: 132, sym: 'drawers' },
   roomsupply: { w: 100, d: 40, ht: 200, sym: 'cabinet' },
-  chair: { w: 50, d: 50, ht: 90, sym: 'chair' },
+  chair: { w: 50, d: 50, ht: 90, sym: 'chair', name: '椅' },
   meeting: { w: 240, d: 110, ht: 75, sym: 'meeting' },
   door: { w: 90, d: 90, ht: 210, sym: 'door' },
   door2: { w: 140, d: 70, ht: 210, sym: 'door2' },
@@ -59,8 +62,9 @@ export const CATALOG = {
   kids_stool: { w: 30, d: 30, ht: 30, sym: 'stool', name: '兒童凳' },
   laundry_tower: { w: 60, d: 65, ht: 172, sym: 'laundry', name: '洗衣機＋乾衣機（上下疊）' },
   folding_table: { w: 120, d: 60, ht: 80, sym: 'table', name: '摺衫枱' },
+  stairs: { w: 210, d: 316, ht: 300, sym: 'stairs', name: '樓梯', internal: true }, // 由設施 "stairs" 自動產生
 };
-export const FURNITURE_TYPES = Object.keys(CATALOG).filter(k => CATALOG[k].name);
+export const FURNITURE_TYPES = Object.keys(CATALOG).filter(k => CATALOG[k].name && !CATALOG[k].internal);
 const OPENING_TYPES = new Set(['door', 'door2', 'window']);
 
 export class DataError extends Error {
@@ -283,9 +287,32 @@ export function safeUrl(u) {
   return s;
 }
 
-export function normalizeCenter(raw, plan) {
+// 樓層：center.json 嘅 floors；冇寫就當只有一層。
+export function normalizeFloors(raw) {
+  const errors = [];
+  const list = Array.isArray(raw?.floors) && raw.floors.length ? raw.floors : [{ id: 'G', name: '地下', plan: 'data/plan.json' }];
+  const seen = new Set();
+  const floors = list.map((fl, i) => {
+    const id = str(fl?.id, 10) || `F${i}`;
+    if (!/^[A-Za-z0-9_-]+$/.test(id)) errors.push(`第 ${i + 1} 層嘅 id「${id}」只可以用英文字母、數字、- 同 _。`);
+    if (seen.has(id) || id === 'all') errors.push(`樓層 id「${id}」重複咗或者唔可以用。`);
+    seen.add(id);
+    const plan = str(fl?.plan, 120) || 'data/plan.json';
+    if (!/^[A-Za-z0-9_./-]+\.json$/.test(plan) || plan.includes('..') || plan.startsWith('/')) errors.push(`樓層「${id}」嘅平面圖路徑（plan）要係 data/xxx.json。`);
+    return { id, name: str(fl?.name, 20) || id, plan, index: i, base: i * FLOOR_H };
+  });
+  return { floors, errors };
+}
+
+export function normalizeCenter(raw, plans) {
   const errors = [], warnings = [];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new DataError('設施資料（center.json）唔係正確嘅格式。');
+  const fl = normalizeFloors(raw);
+  const floors = fl.floors;
+  errors.push(...fl.errors);
+  const floorIds = new Set(floors.map(x => x.id));
+  // plans：每層一張平面圖 {G: plan, 1F: plan}；舊寫法淨係一張圖都得
+  const planOf = id => (plans && plans.rooms ? plans : plans?.[id]) || null;
   const c = raw.center || {};
   const center = {
     name: str(c.name, 60) || '社區客廳', subtitle: str(c.subtitle, 120), address: str(c.address, 200),
@@ -305,9 +332,17 @@ export function normalizeCenter(raw, plan) {
     seen.add(id);
     const name = str(f.name, 40);
     if (!name) errors.push(`${label}未有名稱（name）。`);
+    let floor = str(f.floor, 10) || floors[0].id;
+    if (floor !== 'all' && !floorIds.has(floor)) { errors.push(`${label}嘅樓層（floor）「${floor}」唔存在，可以用：${[...floorIds].join('、')}。`); floor = floors[0].id; }
+    const plan = planOf(floor === 'all' ? floors[0].id : floor);
     const at = xy(f.at);
     if (!at) errors.push(`${label}嘅位置（at）要寫做 [x, y]，單位 cm，例如 [450, 900]。`);
     else if (plan && !insideBuilding(plan, at)) warnings.push(`${label}嘅位置 [${at.x}, ${at.y}] 喺平面圖外框以外，請檢查。`);
+    let stairs = null;
+    if (f.stairs != null) {
+      if (floors.length < 2) errors.push(`${label}係樓梯，但係 floors 得一層。`);
+      else stairs = { r: isNum(f.stairs.r) ? +f.stairs.r : 0, lower: floors[0].id, upper: floors[1].id };
+    }
     let area = null;
     if (f.area != null) {
       const pts = Array.isArray(f.area) ? f.area.map(xy) : [];
@@ -323,6 +358,7 @@ export function normalizeCenter(raw, plan) {
       photo: safeUrl(f.photo), photoAlt: str(f.photoAlt, 120),
       tour: str(f.tour, 400), seconds: isNum(f.seconds) ? Math.min(60, Math.max(3, +f.seconds)) : null,
       staffOnly: f.staffOnly === true, tentative: f.tentative === true, at: at || { x: 0, y: 0 }, area, radius: isNum(f.radius) ? +f.radius : 150, view, color,
+      floor, stairs,
     });
     if (f.photo && !safeUrl(f.photo)) errors.push(`${label}嘅相片路徑（photo）唔安全或者唔正確，請用 photos/xxx.jpg。`);
     // 設施傢俬：dx／dy 係相對設施位置（at）嘅距離（cm），設施搬位傢俬會跟住搬。
@@ -331,7 +367,7 @@ export function normalizeCenter(raw, plan) {
     if (f.furniture != null && !Array.isArray(f.furniture)) errors.push(`${label}嘅傢俬（furniture）要係一個清單 [ ... ]。`);
     (Array.isArray(f.furniture) ? f.furniture : []).forEach((it, j) => {
       const c = CATALOG[it?.type];
-      if (!c || OPENING_TYPES.has(it.type)) { errors.push(`${label}第 ${j + 1} 件傢俬類型「${str(it?.type, 30)}」唔認識。可以用：${FURNITURE_TYPES.join('、')}。`); return; }
+      if (!c || OPENING_TYPES.has(it.type) || c.internal) { errors.push(`${label}第 ${j + 1} 件傢俬類型「${str(it?.type, 30)}」唔認識。可以用：${FURNITURE_TYPES.join('、')}。`); return; }
       if (!isNum(it.dx) || !isNum(it.dy)) { errors.push(`${label}第 ${j + 1} 件傢俬（${it.type}）要有 dx 同 dy（相對設施位置，cm）。`); return; }
       fac.furniture.push({
         id: `${id}~${j + 1}`, type: it.type, fid: id, x: fac.at.x + +it.dx, y: fac.at.y + +it.dy, r: isNum(it.r) ? +it.r : 0,
@@ -344,19 +380,45 @@ export function normalizeCenter(raw, plan) {
   if (s.at != null && !start.at) errors.push('漫遊起點（start.at）要寫做 [x, y]。');
   const pending = facilities.filter(f => !f.summary || !(f.hours || f.booking)).length;
   const tentative = facilities.filter(f => f.tentative).length;
-  return { center, facilities, start, updated: str(raw.updated, 20), draft: raw.draft === true || pending > 0 || tentative > 0, pending, tentative, errors, warnings };
+  const pendingOf = f => !f.stairs && (!f.summary || !(f.hours || f.booking));
+  return { center, floors, facilities, start, updated: str(raw.updated, 20), draft: raw.draft === true || facilities.some(pendingOf) || tentative > 0, pending: facilities.filter(pendingOf).length, tentative, errors, warnings };
+}
+
+// 某層有邊啲設施（floor 寫 "all" 嘅例如樓梯，每層都有）
+export const facilitiesOn = (facilities, floorId) => facilities.filter(f => f.floor === floorId || f.floor === 'all');
+
+/* ---------- 樓梯 ---------- */
+// U 形樓梯：第一跑喺左邊（本地 x < 0）由樓梯口向 -y 上，平台喺盡頭，第二跑喺右邊向 +y 上到上層。
+export function stairsGeometry(f) {
+  const s = f.stairs; if (!s) return null;
+  const c = { x: f.at.x, y: f.at.y, r: s.r }, hw = STAIR.w / 2, hd = STAIR.d / 2;
+  const rect = (x0, y0, x1, y1) => { const m = toWorldFrom(c, (x0 + x1) / 2, (y0 + y1) / 2); return { x: m.x, y: m.y, w: x1 - x0, h: y1 - y0, r: c.r }; };
+  const poly = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([x, y]) => toWorldFrom(c, x, y));
+  const topY = -hd + 100 + (STAIR.risers - STAIR.firstRisers - 1) * STAIR.tread; // 第二跑到頂嘅位置（本地 y）：7 級踏步之後就係上層
+  const toLocal = p => { const a = rad(c.r), dx = p.x - c.x, dy = p.y - c.y; return { x: dx * Math.cos(a) + dy * Math.sin(a), y: -dx * Math.sin(a) + dy * Math.cos(a) }; };
+  const pose = (lx, ly) => { const p = toWorldFrom(c, lx, ly), q = toWorldFrom(c, lx, ly + 100); return { x: p.x, y: p.y, yaw: Math.atan2(-(q.x - p.x), -(q.y - p.y)) }; };
+  return {
+    c, hw, hd, topY,
+    footprint: poly(-hw, -hd, hw, hd),
+    // 下層：成個樓梯都擋路，除咗左邊樓梯口
+    lower: { floor: s.lower, to: s.upper, colliders: [rect(-hw, -hd, hw, hd - 63), rect(-STAIR.gap / 2, hd - 63, hw, hd)], trigger: { x0: -hw + 5, x1: -STAIR.gap / 2 - 5, y0: hd - 63, y1: hd - 8 }, arrive: pose(-hw / 2 - 2, hd + 45) },
+    // 上層：樓梯井有欄杆，淨係右邊樓梯頂可以落
+    upper: { floor: s.upper, to: s.lower, colliders: [rect(-hw, -hd, STAIR.gap / 2, topY), rect(STAIR.gap / 2, -hd, hw, hd - 63)], trigger: { x0: STAIR.gap / 2 + 5, x1: hw - 5, y0: hd - 63, y1: hd - 8 }, arrive: pose(hw / 2 + 2, hd + 45) },
+    hole: poly(-hw, -hd, hw, topY),
+    inTrigger(p, which) { const q = toLocal(p), t = this[which].trigger; return q.x >= t.x0 && q.x <= t.x1 && q.y >= t.y0 && q.y <= t.y1; },
+  };
 }
 
 // 將設施傢俬加入平面圖：之後 3D、2D、小地圖同碰撞都會用到。
-export function withFurniture(plan, facilities) {
-  const extra = facilities.flatMap(f => f.furniture || []);
+export function withFurniture(plan, facilities, floorId) {
+  const extra = facilities.filter(f => floorId == null || f.floor === floorId).flatMap(f => f.furniture || []);
   if (!extra.length) return plan;
   const items = plan.items.concat(extra);
   return { ...plan, items, byId: Object.fromEntries(items.map(i => [i.id, i])) };
 }
 
 // 檢查設施傢俬：出咗平面圖、撞牆、撞到其他傢俬或者擋住門。回傳中文提示。
-export function furnitureProblems(plan, facilities) {
+export function furnitureProblems(plan, facilities, obstacles = []) {
   const out = [], segs = baseSegments(plan);
   const distSeg = (p, a, b) => { const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2)); return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy); };
   const axes = it => { const a = rad(it.r || 0); return [[Math.cos(a), Math.sin(a)], [-Math.sin(a), Math.cos(a)]]; };
@@ -378,9 +440,26 @@ export function furnitureProblems(plan, facilities) {
       const isDoor = o.type === 'door' || o.type === 'door2';
       if ((isDoor || o.type === 'column' || (!flat(it) && !flat(o))) && hit(it, o)) out.push(`${label}${isDoor ? '擋住咗門口' : '撞到原有傢俬'}。`);
     });
+    obstacles.forEach(o => { if (hit(it, o)) out.push(`${label}擋住咗${o.label || '樓梯'}。`); });
     mine.slice(k + 1).forEach(({ it: o, f: g }) => { if (!(flat(it) && flat(o)) && hit(it, o)) out.push(`${label}同「${g.name}」嘅 ${CATALOG[o.type].name || o.type} 疊埋。`); });
   });
   return [...new Set(out)];
+}
+
+// 樓梯當一件傢俬咁檢查（撞牆、撞嘢、擋門）
+export function stairsItem(f) {
+  return { id: `${f.id}~stairs`, type: 'stairs', fid: f.id, x: f.at.x, y: f.at.y, w: STAIR.w, h: STAIR.d, ht: FLOOR_H, r: f.stairs.r };
+}
+// 逐層檢查設施傢俬同樓梯，回傳「地下：……」咁嘅提示
+export function allFurnitureProblems(plans, data) {
+  const out = [];
+  const stairs = data.facilities.filter(f => f.stairs).map(f => ({ name: f.name, furniture: [stairsItem(f)] }));
+  data.floors.forEach(fl => {
+    const plan = plans[fl.id]; if (!plan) return;
+    furnitureProblems(plan, data.facilities.filter(f => f.floor === fl.id).concat(stairs))
+      .forEach(m => out.push(data.floors.length > 1 ? `${fl.name}：${m}` : m));
+  });
+  return out;
 }
 
 // 設施嘅導覽時間：按字數計，長者睇字慢啲，所以寬鬆啲。

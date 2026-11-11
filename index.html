@@ -35,6 +35,8 @@
         </div>
       </div>
     </div>
+    <div class="floor-seg" id="floor-seg" role="group" aria-label="樓層" hidden></div>
+    <div class="floor-flash" id="floor-flash" aria-hidden="true"></div>
     <div class="v3-tools" id="v3-tools" hidden>
       <button type="button" class="pill-btn" id="btn-walls" aria-pressed="false">顯示完整牆身</button>
       <button type="button" class="pill-btn" id="btn-reset">返回全景</button>
@@ -63,6 +65,7 @@
 
     <div class="walkui" id="walkui" hidden>
       <p class="walk-hint" id="walk-hint"></p>
+      <p class="walk-floor" id="walk-floor" aria-live="polite"></p>
       <button type="button" class="pill-btn walk-home" id="walk-home">返回起點</button>
       <div class="dpad" role="group" aria-label="行路掣">
         <button type="button" data-wk="f" aria-label="向前行">▲</button>

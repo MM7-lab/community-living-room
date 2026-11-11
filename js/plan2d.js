@@ -1,5 +1,5 @@
 // 2D 平面圖：同 3D 用同一份 plan.json 同設施座標，所以位置一定一致。
-import { CATALOG, baseSegments, openingsOf, holesOn, solidSpans } from './plan-model.js';
+import { CATALOG, STAIR, baseSegments, openingsOf, holesOn, solidSpans } from './plan-model.js';
 
 const r2 = n => Math.round(n * 10) / 10;
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -48,7 +48,23 @@ function symbol(sym, w, h, type = '') {
   }
 }
 
-function planSvg(plan, facilities, vb) {
+// 樓梯（平面圖由上面望落去）：級數線、轉角平台、中間牆、上樓方向箭咀
+function stairsSvg(sg, role) {
+  if (!sg) return '';
+  const { hw, hd, topY } = sg, t = STAIR.tread, gx = STAIR.gap / 2, n1 = STAIR.firstRisers - 1, n2 = STAIR.risers - STAIR.firstRisers - 1;
+  let h = `<g class="p-stairs${role === 'upper' ? ' upper' : ''}" transform="translate(${r2(sg.c.x)} ${r2(sg.c.y)}) rotate(${sg.c.r})">`;
+  h += `<rect class="st-bg" x="${-hw}" y="${-hd}" width="${2 * hw}" height="${2 * hd}"/>`;
+  h += `<rect class="st-land" x="${-hw}" y="${-hd}" width="${2 * hw}" height="100"/>`;
+  for (let i = 1; i <= n1; i++) h += `<line class="st-tread" x1="${-hw}" y1="${hd - t * i}" x2="${-gx}" y2="${hd - t * i}"/>`;
+  for (let j = 1; j <= n2; j++) h += `<line class="st-tread" x1="${gx}" y1="${-hd + 100 + t * j}" x2="${hw}" y2="${-hd + 100 + t * j}"/>`;
+  h += `<rect class="st-spine" x="${-gx}" y="${-hd + 100}" width="${2 * gx}" height="${2 * hd - 100}"/>`;
+  h += `<path class="st-arrow" d="M ${-hw / 2} ${hd - 10} V ${-hd + 50} H ${hw / 2} V ${hd - 22}"/>`;
+  h += `<path class="st-head" d="M ${hw / 2 - 12} ${hd - 34} L ${hw / 2} ${hd - 12} L ${hw / 2 + 12} ${hd - 34} Z"/>`;
+  if (role === 'upper') h += `<path class="st-rail" d="M ${gx} ${topY} H ${-hw} V ${-hd} H ${hw} V ${topY}"/>`; // 上層樓梯井欄杆
+  return h + '</g>';
+}
+
+function planSvg(plan, facilities, vb, stairs, stairsRole) {
   let h = `<svg class="plan-svg" viewBox="${r2(vb.x)} ${r2(vb.y)} ${r2(vb.w)} ${r2(vb.h)}" role="img" aria-label="社區客廳平面圖">`;
   plan.rooms.forEach(r => { h += `<polygon class="p-room" points="${r.pts.map(p => r2(p.x) + ',' + r2(p.y)).join(' ')}"/>`; });
   facilities.forEach(f => {
@@ -69,10 +85,11 @@ function planSvg(plan, facilities, vb) {
     });
   });
   items.filter(it => layer(it) === 2).forEach(it => { h += furn(it); });
+  h += stairsSvg(stairs, stairsRole);
   return h + '</svg>';
 }
 
-export function createPlan2D({ host, plan, facilities, onPick }) {
+export function createPlan2D({ host, plan, facilities, onPick, stairs = null, stairsRole = null }) {
   const b = plan.bounds, pad = 60;
   const vb = { x: b.x - pad, y: b.y - pad, w: b.w + pad * 2, h: b.h + pad * 2 };
   const pct = p => ({ x: (p.x - vb.x) / vb.w * 100, y: (p.y - vb.y) / vb.h * 100 });
@@ -85,7 +102,7 @@ export function createPlan2D({ host, plan, facilities, onPick }) {
     </div>
     <div class="plan-scroll">
       <div class="plan-box">
-        ${planSvg(plan, facilities, vb)}
+        ${planSvg(plan, facilities, vb, stairs, stairsRole)}
         <svg class="plan-leaders" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
         ${facilities.map(f => `<button type="button" class="ppin" data-fid="${esc(f.id)}" style="--c:${f.color}" aria-label="${f.no}. ${esc(f.name)}"><span class="ppin-n">${f.no}</span><span class="ppin-i" aria-hidden="true">${esc(f.icon)}</span></button>`).join('')}
         <div class="pme" hidden aria-label="你喺度"><span class="pme-arrow"></span><span class="pme-text">你喺度</span></div>
@@ -157,6 +174,7 @@ export function createPlan2D({ host, plan, facilities, onPick }) {
     },
     // 漫遊時記低位置，喺平面圖顯示「你喺度」。yaw 同辦公室工具一樣（弧度）。
     setMe(x, y, yaw) {
+      if (x == null) { me.hidden = true; return; }
       const q = pct({ x, y });
       me.hidden = false;
       me.style.left = q.x + '%'; me.style.top = q.y + '%';

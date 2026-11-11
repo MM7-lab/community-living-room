@@ -60,6 +60,22 @@ QR code 圖檔：[`assets/qr-code.png`](assets/qr-code.png)（印刷用）、[`a
 
 全部設施都填齊簡介同開放時間（或者預約方法），而且冇「位置暫定」之後，頂部嘅「試行版」橫額會自動消失。
 
+## 樓層同樓梯
+
+社區客廳有兩層，喺 `center.json` 嘅 `floors` 設定，每層一張平面圖：
+
+```json
+"floors": [
+  {"id": "G", "name": "地下", "plan": "data/plan.json"},
+  {"id": "1F", "name": "一樓", "plan": "data/plan-1f.json"}
+]
+```
+
+- 每個設施用 `"floor": "1F"` 講明喺邊層；唔寫就當係第一層（地下）。`"floor": "all"` 即係每層都見到，例如樓梯。
+- 一樓平面圖（`data/plan-1f.json`）暫時用地下嘅外框同結構柱，冇內部間隔；有真實圖則就換呢個檔。
+- 樓梯係一個設施，加 `"stairs": {"r": 180}`。佢係 U 形雙跑樓梯（闊 210 × 長 316 cm，17 級），`at` 係樓梯中心，`r` 係方向（樓梯口向邊）。漫遊時行入樓梯口會自動上落樓；3D 一樓樓板會喺樓梯位置開樓梯井同加欄杆。
+- 檢查工具會逐層睇傢俬有冇撞牆、撞樓梯或者擋門。
+
 ## 設施傢俬
 
 每個設施可以有自己嘅傢俬（`furniture`），會喺 3D、2D 平面圖同小地圖出現，漫遊時亦會擋路。位置用**相對設施位置（`at`）**嘅距離表示，所以改設施 `at`，傢俬會成組跟住搬。
@@ -143,7 +159,8 @@ js/view3d.js          3D 模型、導覽、漫遊（three.js r128）
 js/plan2d.js          2D 平面圖
 js/plan-model.js      平面圖計算、碰撞、資料檢查（瀏覽器同 node 共用）
 data/center.json      ★ 中心同設施資料（日常只改呢個）
-data/plan.json        平面圖（由辦公室工具匯入）
+data/plan.json        地下平面圖（由辦公室工具匯入）
+data/plan-1f.json     一樓平面圖（暫用地下外框）
 photos/               設施相片
 assets/qr-code.*      QR code
 tools/                匯入平面圖、檢查資料、產生 QR code

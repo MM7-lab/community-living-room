@@ -1,13 +1,17 @@
 {
-  "updated": "2026-11-10",
+  "updated": "2026-11-11",
   "center": {
     "name": "賽馬會「聚首壹塘」社區客廳",
     "subtitle": "3D 導覽地圖",
     "address": "",
     "phone": "",
     "note": "設施資料參考《明愛牛頭角社區中心通訊》。",
-    "planNote": "平面圖暫時借用新辦公室平面圖，標咗「位置暫定」嘅設施位置未經確認。尺寸只供參考。"
+    "planNote": "平面圖暫時借用新辦公室平面圖；一樓暫用同一個外框。標咗「位置暫定」嘅位置未經確認，尺寸只供參考。"
   },
+  "floors": [
+    {"id": "G", "name": "地下", "plan": "data/plan.json"},
+    {"id": "1F", "name": "一樓", "plan": "data/plan-1f.json"}
+  ],
   "start": {"at": [647, 175], "lookAt": [751, 289]},
   "facilities": [
     {
@@ -89,59 +93,6 @@
       ]
     },
     {
-      "id": "gym",
-      "name": "健身設備",
-      "icon": "🏋️",
-      "summary": "室內運動器材。",
-      "hours": "",
-      "booking": "",
-      "photo": "",
-      "tentative": true,
-      "at": [575, 970],
-      "furniture": [
-        {"type": "treadmill", "dx": 5, "dy": -110},
-        {"type": "exercise_bike", "dx": 10, "dy": 70},
-        {"type": "gym_mat", "dx": 15, "dy": 215, "r": 90}
-      ]
-    },
-    {
-      "id": "library",
-      "name": "圖書閣",
-      "icon": "📚",
-      "summary": "閱讀及學習角落。",
-      "hours": "",
-      "booking": "",
-      "photo": "",
-      "tentative": true,
-      "at": [110, 860],
-      "furniture": [
-        {"type": "bookshelf", "dx": 5, "dy": -200},
-        {"type": "reading_table", "dx": 5, "dy": 40},
-        {"type": "chair", "dx": 5, "dy": -35, "r": 180},
-        {"type": "chair", "dx": 5, "dy": 115}
-      ]
-    },
-    {
-      "id": "kids",
-      "name": "兒童遊樂室",
-      "icon": "🧸",
-      "summary": "兒童室內活動空間。",
-      "hours": "",
-      "booking": "",
-      "photo": "",
-      "tentative": true,
-      "at": [290, 1430],
-      "area": [[0, 1292], [534, 1292], [534, 1555], [0, 1555]],
-      "furniture": [
-        {"type": "play_mat", "dx": 50, "dy": -40},
-        {"type": "toy_shelf", "dx": -263, "dy": -40, "r": 270},
-        {"type": "kids_table", "dx": -155, "dy": -80},
-        {"type": "kids_stool", "dx": -215, "dy": -80},
-        {"type": "kids_stool", "dx": -95, "dy": -80},
-        {"type": "kids_stool", "dx": -155, "dy": -20}
-      ]
-    },
-    {
       "id": "laundry",
       "name": "洗衣及乾衣機",
       "icon": "🧺",
@@ -157,6 +108,85 @@
         {"type": "laundry_tower", "dx": -72, "dy": 89, "r": 180},
         {"type": "laundry_tower", "dx": -7, "dy": 89, "r": 180},
         {"type": "folding_table", "dx": 143, "dy": -44, "r": 90}
+      ]
+    },
+    {
+      "id": "stairs",
+      "name": "樓梯",
+      "icon": "🪜",
+      "summary": "上落地下同一樓。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tour": "呢度係樓梯，跟住上一樓繼續睇。",
+      "tentative": true,
+      "floor": "all",
+      "at": [330, 1060],
+      "radius": 170,
+      "stairs": {"r": 180}
+    },
+    {
+      "id": "library",
+      "name": "圖書閣",
+      "icon": "📚",
+      "summary": "閱讀及學習角落。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tentative": true,
+      "floor": "1F",
+      "at": [130, 830],
+      "furniture": [
+        {"type": "bookshelf", "dx": -103, "dy": -175, "r": 270},
+        {"type": "bookshelf", "dx": -103, "dy": -80, "r": 270},
+        {"type": "bookshelf", "dx": -103, "dy": 15, "r": 270},
+        {"type": "bookshelf", "dx": -103, "dy": 110, "r": 270},
+        {"type": "reading_table", "dx": 10, "dy": -110},
+        {"type": "reading_table", "dx": 10, "dy": 120},
+        {"type": "chair", "dx": 10, "dy": -185, "r": 180},
+        {"type": "chair", "dx": 10, "dy": -35},
+        {"type": "chair", "dx": 10, "dy": 45, "r": 180},
+        {"type": "chair", "dx": 10, "dy": 195}
+      ]
+    },
+    {
+      "id": "kids",
+      "name": "兒童遊樂室",
+      "icon": "🧸",
+      "summary": "兒童室內活動空間。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tentative": true,
+      "floor": "1F",
+      "at": [290, 1430],
+      "area": [[0, 1292], [534, 1292], [534, 1555], [0, 1555]],
+      "furniture": [
+        {"type": "play_mat", "dx": 50, "dy": -40},
+        {"type": "toy_shelf", "dx": -263, "dy": -40, "r": 270},
+        {"type": "kids_table", "dx": -155, "dy": -80},
+        {"type": "kids_stool", "dx": -215, "dy": -80},
+        {"type": "kids_stool", "dx": -95, "dy": -80},
+        {"type": "kids_stool", "dx": -155, "dy": -20}
+      ]
+    },
+    {
+      "id": "gym",
+      "name": "健身設備",
+      "icon": "🏋️",
+      "summary": "室內運動器材。",
+      "hours": "",
+      "booking": "",
+      "photo": "",
+      "tentative": true,
+      "floor": "1F",
+      "at": [740, 1000],
+      "furniture": [
+        {"type": "treadmill", "dx": -90, "dy": -100},
+        {"type": "treadmill", "dx": 20, "dy": -100},
+        {"type": "exercise_bike", "dx": 120, "dy": -120},
+        {"type": "exercise_bike", "dx": 120, "dy": 10},
+        {"type": "gym_mat", "dx": -40, "dy": 80}
       ]
     }
   ]

@@ -54,11 +54,20 @@ async function openPage(device, opts = {}) {
   return { ctx, page, errors };
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// 㩒住手機掣（或者鍵盤鍵）直到條件成立：測試機用軟件模擬 3D，好慢，所以唔用固定時間。
+async function holdUntil(page, how, cond, timeout = 20000) {
+  if (how.key) await page.keyboard.down(how.key);
+  else { const b = await page.locator(how.button).boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); }
+  const t0 = Date.now(); let ok = false;
+  while (Date.now() - t0 < timeout) { if (await page.evaluate(cond)) { ok = true; break; } await sleep(150); }
+  if (how.key) await page.keyboard.up(how.key); else await page.mouse.up();
+  return ok;
+}
 
 /* ---------- 手機（直向） ---------- */
 const phone = devices['iPhone 13'];
 const { ctx, page, errors } = await openPage(phone);
-const facilities = await page.evaluate(() => window.__clr.data.facilities.map(f => ({ id: f.id, name: f.name, at: f.at })));
+const facilities = await page.evaluate(() => window.__clr.data.facilities.map(f => ({ id: f.id, name: f.name, at: f.at, floor: f.floor })));
 
 await check('1. 唔使登入就打開到 3D 地圖', async () => {
   assert.equal(await page.locator('#v3-msg').isHidden(), true, '3D 載入訊息仲未消失');
@@ -79,6 +88,9 @@ await check('2. 每個設施都撳得到，資料卡有名稱、簡介、時間�
   await sleep(400);
   // 全景入面每個設施標記都要見到，而且撳中嘅位置唔會俾其他標記遮住。
   for (const f of facilities) {
+    // 用左上角轉層掣去返設施所在嗰層
+    const fl = f.floor === 'all' ? 'G' : f.floor;
+    if (await page.evaluate(() => window.__clr.S.view.floor) !== fl) { await page.click(`#floor-seg [data-floor="${fl}"]`); await sleep(1500); }
     const pin = page.locator(`.pin[data-fid="${f.id}"]`);
     assert.equal(await pin.isVisible(), true, `「${f.name}」嘅 3D 標記見唔到`);
     const bb = await pin.boundingBox();
@@ -91,13 +103,15 @@ await check('2. 每個設施都撳得到，資料卡有名稱、簡介、時間�
       assert.ok(t.includes(f.name), `資料卡標題「${t}」唔係「${f.name}」`);
       assert.ok((await page.textContent('#card-summary')).trim().length > 0, '冇簡介');
       const rows = await page.textContent('#card-rows');
-      assert.ok(rows.includes('開放時間') && rows.includes('預約方法'), '冇時間或者預約方法');
+      if (f.id === 'stairs') assert.ok(rows.includes('連接') && rows.includes('一樓'), '樓梯資料卡冇講連接邊幾層');
+      else assert.ok(rows.includes('開放時間') && rows.includes('預約方法'), '冇時間或者預約方法');
       assert.equal(await page.locator('#card-photo img, #card-photo .ph-empty').count(), 1, '冇相片位');
       if (f.id === facilities[4].id) { await sleep(400); await page.screenshot({ path: join(OUT, '02-card.png') }); }
     } finally {
       if (await page.locator('#card').isVisible()) await page.click('#card .close-btn');
     }
   }
+  await page.click('#floor-seg [data-floor="G"]'); await sleep(1500);
   await page.screenshot({ path: join(OUT, '01b-pins.png') });
 });
 
@@ -127,7 +141,7 @@ await check('3. 自動導覽由入口開始，順序行晒，可以暫停同跳�
   await page.waitForFunction(() => window.__clr.S.view.tour.state().active);
   let st = await page.evaluate(() => window.__clr.S.view.tour.state());
   assert.equal(st.fid, 'entrance', `第一站係 ${st.fid}`);
-  await page.waitForFunction(() => window.__clr.S.view.tour.state().phase === 'dwell', null, { timeout: 8000 });
+  await page.waitForFunction(() => window.__clr.S.view.tour.state().phase === 'dwell', null, { timeout: 30000 });
   await page.screenshot({ path: join(OUT, '03-tour-entrance.png') });
   // 暫停：時間唔再行
   await page.click('#tour-play');
@@ -144,9 +158,15 @@ await check('3. 自動導覽由入口開始，順序行晒，可以暫停同跳�
     st = await page.evaluate(() => window.__clr.S.view.tour.state());
     seen.push(st.fid);
     assert.ok((await page.textContent('#tour-title')).includes(facilities[i].name));
+    // 導覽會自動轉去設施所在嗰層，字卡亦講明係邊層
+    if (facilities[i].floor !== 'all') {
+      assert.equal(await page.evaluate(() => window.__clr.S.view.floor), facilities[i].floor, `「${facilities[i].name}」冇轉去啱嘅樓層`);
+      assert.ok((await page.textContent('#tour-step')).includes(facilities[i].floor === 'G' ? '地下' : '一樓'));
+    }
+    if (facilities[i].id === 'library') { await page.waitForFunction(() => window.__clr.S.view.tour.state().phase === 'dwell', null, { timeout: 30000 }); await page.screenshot({ path: join(OUT, '04b-tour-1f.png') }); }
   }
   assert.deepEqual(seen, facilities.map(f => f.id));
-  await page.waitForFunction(() => window.__clr.S.view.tour.state().phase === 'dwell', null, { timeout: 8000 });
+  await page.waitForFunction(() => window.__clr.S.view.tour.state().phase === 'dwell', null, { timeout: 30000 });
   await page.screenshot({ path: join(OUT, '04-tour-last.png') });
   await page.click('#tour-next');
   assert.equal(await page.locator('#tour-done').isVisible(), true, '最後冇顯示完結');
@@ -161,36 +181,58 @@ await check('4. 漫遊：手機掣行得，唔會穿牆', async () => {
   await page.click('[data-tab="walk"]');
   await page.waitForSelector('#walkui:not([hidden])');
   assert.equal(await page.locator('.dpad').isVisible(), true, '手機冇顯示行路掣');
-  const s0 = await page.evaluate(() => window.__clr.S.view.walkState());
-  const fwd = page.locator('[data-wk="f"]');
-  const b = await fwd.boundingBox();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-  await page.mouse.down(); await sleep(1200); await page.mouse.up();
-  const s1 = await page.evaluate(() => window.__clr.S.view.walkState());
-  assert.ok(Math.hypot(s1.x - s0.x, s1.y - s0.y) > 50, `撳住向前掣得行咗 ${Math.round(Math.hypot(s1.x - s0.x, s1.y - s0.y))} cm`);
+  await page.evaluate(() => { window.__clr.s0 = window.__clr.S.view.walkState(); });
+  const moved = await holdUntil(page, { button: '[data-wk="f"]' }, () => { const a = window.__clr.s0, b = window.__clr.S.view.walkState(); return Math.hypot(b.x - a.x, b.y - a.y) > 50; });
+  assert.ok(moved, '撳住向前掣行唔郁');
   await page.screenshot({ path: join(OUT, '05-walk-phone.png') });
   // 對住儲物室間隔牆（y = 1292）一直行 5 秒：唔可以穿過去。yaw = π 即係向 +y 行。
-  await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(300, 1150); v.setYaw(Math.PI); });
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-  await page.mouse.down(); await sleep(5000); await page.mouse.up();
+  await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(150, 1150); v.setYaw(Math.PI); });
+  // 一直向牆行，直到停低（連續幾次位置唔變）或者穿咗牆
+  await holdUntil(page, { button: '[data-wk="f"]' }, () => { const c = window.__clr, y = c.S.view.walkState().y; const same = c.lastY != null && Math.abs(y - c.lastY) < 0.5; c.lastY = y; c.same = same ? (c.same || 0) + 1 : 0; return y > 1292 || c.same >= 4; }, 25000);
   const s2 = await page.evaluate(() => window.__clr.S.view.walkState());
   assert.ok(s2.y < 1292 - 22, `穿咗牆：y = ${s2.y.toFixed(1)}（牆喺 y = 1292）`);
 });
 await check('4b. 漫遊：入門口行得過（門唔會擋死）', async () => {
   // 由主區行入玻璃房：門喺 x 650–725、y 730（房門），房喺 y > 730。
   await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(688, 690); v.setYaw(Math.PI); });
-  const fwd = page.locator('[data-wk="f"]'), b = await fwd.boundingBox();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-  await page.mouse.down(); await sleep(1600); await page.mouse.up();
+  await holdUntil(page, { button: '[data-wk="f"]' }, () => window.__clr.S.view.walkState().y > 760);
   const s2 = await page.evaluate(() => window.__clr.S.view.walkState());
   assert.ok(s2.y > 760, `行唔入玻璃房：y = ${s2.y.toFixed(1)}`);
   await page.screenshot({ path: join(OUT, '06-walk-door.png') });
+});
+
+await check('4d. 漫遊：行入樓梯口上一樓，再行返落地下', async () => {
+  // 地下樓梯口喺樓梯北面東邊：企喺佢前面，面向南（樓梯）
+  await page.evaluate(() => { const v = window.__clr.S.view; v.walkHome(); v.walkTo(385, 850); v.setYaw(Math.PI); });
+  await holdUntil(page, { button: '[data-wk="f"]' }, () => window.__clr.S.view.walkState().floor === '1F');
+  let st = await page.evaluate(() => window.__clr.S.view.walkState());
+  assert.equal(st.floor, '1F', `行入樓梯口冇上到一樓（而家 ${st.floor}，位置 ${st.x.toFixed(0)},${st.y.toFixed(0)}）`);
+  assert.ok((await page.textContent('#walk-floor')).includes('一樓'), '冇顯示「你喺：一樓」');
+  await sleep(1200);
+  await page.screenshot({ path: join(OUT, '06b-walk-1f.png') });
+  // 一樓：轉身行返落樓梯
+  await page.evaluate(() => window.__clr.S.view.setYaw(Math.PI));
+  await holdUntil(page, { button: '[data-wk="f"]' }, () => window.__clr.S.view.walkState().floor === 'G');
+  st = await page.evaluate(() => window.__clr.S.view.walkState());
+  assert.equal(st.floor, 'G', `一樓行返落樓梯失敗（而家 ${st.floor}）`);
   await page.click('[data-tab="3d"]');
+});
+
+await check('4e. 3D 轉層掣：揀一樓淨係見一樓設施', async () => {
+  await page.click('[data-tab="3d"]'); await sleep(500);
+  await page.click('#floor-seg [data-floor="1F"]');
+  const want = facilities.filter(f => f.floor === '1F' || f.floor === 'all').map(f => f.id).sort();
+  // 等鏡頭飛完（測試機慢），標記穩定先比較
+  const ok = await page.waitForFunction(w => JSON.stringify([...document.querySelectorAll('.pin')].filter(p => !p.hidden).map(p => p.dataset.fid).sort()) === JSON.stringify(w), want, { timeout: 20000 }).then(() => true, () => false);
+  const vis = await page.evaluate(() => [...document.querySelectorAll('.pin')].filter(p => !p.hidden).map(p => p.dataset.fid).sort());
+  assert.ok(ok, `一樓見到嘅標記：${vis.join('、')}；應該係：${want.join('、')}`);
+  await page.screenshot({ path: join(OUT, '01c-1f.png') });
+  await page.click('#floor-seg [data-floor="G"]'); await sleep(1200);
 });
 
 await check('5. 2D 平面圖同 3D 位置一致', async () => {
   await page.click('[data-tab="plan"]');
-  await page.waitForSelector('.ppin');
+  await page.waitForSelector('.plan-floor:not([hidden]) .ppin');
   const same = await page.evaluate(() => {
     const { data, plan } = window.__clr;
     const b = plan.bounds, pad = 60, vw = b.w + pad * 2, vh = b.h + pad * 2;
@@ -242,16 +284,14 @@ await ctx.close();
   await check('4c. 漫遊：電腦用 WASD 行得，唔會穿牆', async () => {
     await page.waitForSelector('#walkui:not([hidden])');
     // 測試機用軟件模擬 3D（大約每秒十幾格），所以㩒耐啲。
-    const s0 = await page.evaluate(() => window.__clr.S.view.walkState());
-    await page.keyboard.down('w'); await sleep(2000); await page.keyboard.up('w');
+    await page.evaluate(() => { window.__clr.s0 = window.__clr.S.view.walkState(); });
+    assert.ok(await holdUntil(page, { key: 'w' }, () => { const a = window.__clr.s0, b = window.__clr.S.view.walkState(); return Math.hypot(b.x - a.x, b.y - a.y) > 50; }), 'W 行唔郁');
     const s1 = await page.evaluate(() => window.__clr.S.view.walkState());
-    assert.ok(Math.hypot(s1.x - s0.x, s1.y - s0.y) > 50, 'W 行唔郁');
-    await page.keyboard.down('ArrowLeft'); await sleep(500); await page.keyboard.up('ArrowLeft');
-    const s2 = await page.evaluate(() => window.__clr.S.view.walkState());
-    assert.ok(Math.abs(s2.yaw - s1.yaw) > 0.3, '方向鍵轉唔到身');
+    await page.evaluate(() => { window.__clr.y0 = window.__clr.S.view.walkState().yaw; });
+    assert.ok(await holdUntil(page, { key: 'ArrowLeft' }, () => Math.abs(window.__clr.S.view.walkState().yaw - window.__clr.y0) > 0.3), '方向鍵轉唔到身');
     // 撞左邊外牆（x = 0）
-    await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(120, 900); v.setYaw(Math.PI / 2); });
-    await page.keyboard.down('w'); await sleep(4000); await page.keyboard.up('w');
+    await page.evaluate(() => { const v = window.__clr.S.view; v.walkTo(120, 900); v.setYaw(Math.PI / 2); window.__clr.lastX = null; });
+    await holdUntil(page, { key: 'w' }, () => { const c = window.__clr, x = c.S.view.walkState().x; const same = c.lastX != null && Math.abs(x - c.lastX) < 0.5; c.lastX = x; c.sx = same ? (c.sx || 0) + 1 : 0; return x < 0 || c.sx >= 4; }, 25000);
     const s3 = await page.evaluate(() => window.__clr.S.view.walkState());
     assert.ok(s3.x > 7.5 + 20, `穿咗外牆：x = ${s3.x.toFixed(1)}`);
     await page.screenshot({ path: join(OUT, '09-walk-desktop.png') });

@@ -1,7 +1,8 @@
 // 3D 模型：做法同「新辦公室平面圖」工具一樣（three.js r128 + OrbitControls，由 jsdelivr 載入）。
 import {
-  WALL_H, LOW_H, EYE_H, CATALOG, rad, baseSegments, openingsOf, holesOn, solidSpans,
+  WALL_H, LOW_H, EYE_H, FLOOR_H, STAIR, CATALOG, rad, baseSegments, openingsOf, holesOn, solidSpans, toWorldFrom,
   collisionData, resolveWalk, stepWalk, lineBlocked, elev, baseDims, corners, dwellSeconds, facilityAt, insideBuilding,
+  facilitiesOn, stairsGeometry,
 } from './plan-model.js';
 
 const CDN = 'https://cdn.jsdelivr.net/npm/three@0.128.0/';
@@ -38,6 +39,7 @@ const MAT_SPEC = {
   // 設施傢俬用色
   chrome: [0xC9CED2], red: [0xD9573F], blue: [0x5B8FC9], green: [0x79B86F], yellow: [0xF2C14E], pink: [0xEE9FB0],
   white: [0xFBFAF7], sofa: [0xE59A62], cushion: [0xF4D3A8], leather: [0x7D5440], rubber: [0x6E9E96], black: [0x35302C], glassdark: [0x6F93AD],
+  stair: [0xD8B48A], slab: [0xE9DCC8],
 };
 const WOOD = new Set(['window1', 'window2', 'cube3', 'sqcab', 'rectcab', 'bigrect', 'incentive', 'tv_cabinet']);
 // 書本、地磚、玩具用嘅顏色（暖色為主）
@@ -46,11 +48,31 @@ const seeded = seed => { let s = 0; for (const ch of String(seed)) s = (s * 31 +
 const PIN_Y = 150;
 const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, start, obstacles = [], onPick, onTour, onWalk, onExitWalk, onMode }) {
+export function createView3D({ canvasHost, pinHost, minimap, plans, floors, facilities, start, obstacles = [], onPick, onTour, onWalk, onExitWalk, onMode, onFloor, onStairs }) {
   const T = window.THREE;
-  const b = plan.bounds, cx = b.x + b.w / 2, cz = b.y + b.h / 2, size = Math.max(b.w, b.h);
+  // 樓層：每層一張平面圖（外框一樣），上層放喺 FLOOR_H 高
+  const floorList = floors && floors.length ? floors : [{ id: Object.keys(plans)[0], name: '', index: 0, base: 0 }];
+  const floorObj = id => floorList.find(f => f.id === id) || floorList[0];
+  const baseOf = id => floorObj(id).base;
+  const plan0 = plans[floorList[0].id];
+  const b = plan0.bounds, cx = b.x + b.w / 2, cz = b.y + b.h / 2, size = Math.max(b.w, b.h);
   const fById = Object.fromEntries(facilities.map(f => [f.id, f]));
-  const col = collisionData(plan);
+  const stairF = facilities.find(f => f.stairs && plans[f.stairs.lower] && plans[f.stairs.upper]);
+  const SG = stairF ? stairsGeometry(stairF) : null;
+  let floor = floorList[0].id;
+  const fFloor = f => (f.floor === 'all' ? floor : f.floor);
+  const onFloorF = f => f.floor === floor || f.floor === 'all';
+  // 每層嘅碰撞（牆、傢俬、樓梯）
+  const cols = {};
+  const colOf = id => {
+    if (!cols[id]) {
+      const c = collisionData(plans[id]);
+      if (SG && SG.lower.floor === id) c.rects.push(...SG.lower.colliders);
+      if (SG && SG.upper.floor === id) c.rects.push(...SG.upper.colliders);
+      cols[id] = c;
+    }
+    return cols[id];
+  };
 
   /* ---------- renderer, scene, camera ---------- */
   const renderer = new T.WebGLRenderer({ antialias: true, preserveDrawingBuffer: false });
@@ -138,7 +160,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
   const itemMat = it => it.type.startsWith('rack') ? 'steel' : WOOD.has(it.type) ? 'wood' : it.type === 'supplybox' ? 'card'
     : it.type === 'printer' ? 'dark' : (it.type === 'microwave' || it.type === 'oven') ? 'machine' : 'light';
 
-  function furniture3D(it, wallH) {
+  function furniture3D(it, wallH, plan) {
     const c = CATALOG[it.type]; if (!c || it.type === 'window') return null;
     const b0 = baseDims(it), w = b0.w, d = b0.d, H = b0.ht || 80, g = new T.Group();
     const low = wallH < WALL_H;
@@ -321,7 +343,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     return out;
   }
 
-  function walls3D(parent, H) {
+  function walls3D(parent, H, plan) {
     const opens = openingsOf(plan);
     baseSegments(plan).forEach(sg => {
       const dx = sg.b.x - sg.a.x, dy = sg.b.y - sg.a.y, L = Math.hypot(dx, dy); if (L < 1) return;
@@ -342,25 +364,63 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     });
   }
 
-  const shapeOf = pts => new T.Shape(pts.map(p => new T.Vector2(p.x, -p.y)));
-  function buildRoot(H) {
-    const root = new T.Group();
+  const shapeOf = (pts, holes = []) => {
+    const s = new T.Shape(pts.map(p => new T.Vector2(p.x, -p.y)));
+    holes.forEach(h => s.holes.push(new T.Path(h.map(p => new T.Vector2(p.x, -p.y)))));
+    return s;
+  };
+  // 一層嘅模型：地板（上層有樓梯井）、樓板、牆、傢俬、天花（下層喺樓梯位開窿）
+  function buildRoot(fl, H) {
+    const plan = plans[fl.id], root = new T.Group();
+    const floorHoles = SG && SG.upper.floor === fl.id ? [SG.hole] : [];
+    const ceilHoles = SG && SG.lower.floor === fl.id ? [SG.footprint] : [];
     plan.rooms.forEach(r => {
-      const floor = new T.Mesh(new T.ShapeGeometry(shapeOf(r.pts)), mat('floor'));
-      floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; floor.userData.floor = true; root.add(floor);
+      const floorM = new T.Mesh(new T.ShapeGeometry(shapeOf(r.pts, floorHoles)), mat('floor'));
+      floorM.rotation.x = -Math.PI / 2; floorM.receiveShadow = true; floorM.userData.floor = true; root.add(floorM);
+      if (fl.index > 0) {
+        const slab = new T.Mesh(new T.ExtrudeGeometry(shapeOf(r.pts, floorHoles), { depth: FLOOR_H - WALL_H - 0.5, bevelEnabled: false }), mat('slab'));
+        slab.rotation.x = -Math.PI / 2; slab.position.y = -(FLOOR_H - WALL_H); slab.castShadow = true; slab.receiveShadow = true; root.add(slab);
+      }
     });
-    walls3D(root, H);
+    walls3D(root, H, plan);
     plan.items.forEach(it => {
-      const f = furniture3D(it, H);
+      const f = furniture3D(it, H, plan);
       if (f) { f.traverse(o => { if (o.isMesh) { o.castShadow = o.material !== M.glass; o.receiveShadow = true; } }); root.add(f); }
     });
+    if (floorHoles.length) root.add(stairRailing());
     if (H >= WALL_H) {
       const ceil = new T.Group();
-      plan.rooms.forEach(r => { const m = new T.Mesh(new T.ShapeGeometry(shapeOf(r.pts)), mat('ceiling')); m.rotation.x = -Math.PI / 2; m.position.y = WALL_H; ceil.add(m); });
+      plan.rooms.forEach(r => { const m = new T.Mesh(new T.ShapeGeometry(shapeOf(r.pts, ceilHoles)), mat('ceiling')); m.rotation.x = -Math.PI / 2; m.position.y = WALL_H; ceil.add(m); });
       ceil.userData.noPick = true; root.add(ceil); root.userData.ceiling = ceil;
     }
+    root.position.y = fl.base; root.userData.floorId = fl.id;
     root.visible = false; scene.add(root);
     return root;
+  }
+  // 樓梯本地座標 → 3D 群組（x 同 y 對應 3D 嘅 x 同 z）
+  const stairGroup = () => { const g = new T.Group(); g.position.set(SG.c.x, 0, SG.c.y); g.rotation.y = -rad(SG.c.r); return g; };
+  // U 形樓梯：第一跑（左）上到平台，第二跑（右）返轉頭上到上層
+  function buildStairs() {
+    const g = stairGroup(), rise = FLOOR_H / STAIR.risers, t = STAIR.tread, hw = SG.hw, hd = SG.hd, fw = STAIR.flight, gx = STAIR.gap / 2;
+    const n1 = STAIR.firstRisers - 1, n2 = STAIR.risers - STAIR.firstRisers - 1, land = STAIR.firstRisers * rise;
+    for (let i = 1; i <= n1; i++) box3(g, fw, i * rise, t, -gx - fw / 2, 0, hd - t * (i - 0.5), 'stair');
+    box3(g, STAIR.w, land, 100, 0, 0, -hd + 50, 'stair');                                    // 轉角平台
+    for (let j = 1; j <= n2; j++) box3(g, fw, land + j * rise, t, gx + fw / 2, 0, -hd + 100 + t * (j - 0.5), 'stair');
+    box3(g, STAIR.gap, FLOOR_H, hd - (-hd + 100), 0, 0, (hd + (-hd + 100)) / 2, 'wall');      // 中間牆
+    g.userData.stairs = true; scene.add(g);
+    return g;
+  }
+  // 上層樓梯井四邊欄杆（樓梯頂嗰邊留空俾人上落）
+  function stairRailing() {
+    const g = stairGroup(), hw = SG.hw, hd = SG.hd, top = SG.topY, gx = STAIR.gap / 2;
+    g.position.y = 0;
+    const rail = (x0, z0, x1, z1) => {
+      const L = Math.hypot(x1 - x0, z1 - z0), mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, horiz = Math.abs(z1 - z0) < 1;
+      box3(g, horiz ? L : 3, 92, horiz ? 3 : L, mx, 0, mz, 'glass', false);
+      box3(g, horiz ? L + 4 : 5, 5, horiz ? 5 : L + 4, mx, 92, mz, 'steel', false);
+    };
+    rail(-hw, -hd, hw, -hd); rail(hw, -hd, hw, top); rail(-hw, -hd, -hw, top); rail(-hw, top, gx, top);
+    return g;
   }
   const ground = new T.Mesh(new T.CircleGeometry(size * 3, 48), mat('ground'));
   ground.rotation.x = -Math.PI / 2; ground.position.set(cx, -1, cz); ground.receiveShadow = true; ground.userData.ground = true;
@@ -374,22 +434,30 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     let mesh;
     if (f.area) {
       mesh = new T.Mesh(new T.ShapeGeometry(shapeOf(f.area)), new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.14, depthWrite: false, side: T.DoubleSide }));
-      mesh.rotation.x = -Math.PI / 2; mesh.position.y = 1.2;
+      mesh.rotation.x = -Math.PI / 2; mesh.userData.lift = 1.2;
     } else {
       mesh = new T.Mesh(new T.RingGeometry(48, 66, 40), new T.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide }));
-      mesh.rotation.x = -Math.PI / 2; mesh.position.set(f.at.x, 1.5, f.at.y);
+      mesh.rotation.x = -Math.PI / 2; mesh.position.set(f.at.x, 0, f.at.y); mesh.userData.lift = 1.5;
     }
     mesh.userData.noPick = true; mesh.renderOrder = 2;
     fx.add(mesh); fxBy[f.id] = mesh;
   });
+  function updateFx() {
+    facilities.forEach(f => { const m = fxBy[f.id]; m.visible = onFloorF(f); m.position.y = baseOf(fFloor(f)) + m.userData.lift; });
+  }
 
-  const roots = { low: buildRoot(LOW_H), full: null };
-  let wallsFull = false, current = null;
+  // 每層兩個版本：矮牆（由上面睇）同完整牆身（漫遊）
+  const roots = {};
+  const rootOf = (id, full) => { const R = roots[id] || (roots[id] = {}), k = full ? 'full' : 'low'; return R[k] || (R[k] = buildRoot(floorObj(id), full ? WALL_H : LOW_H)); };
+  const stairsMesh = SG ? buildStairs() : null;
+  let wallsFull = false, current = null, shown = [];
   function showWalls(full) {
-    if (full && !roots.full) roots.full = buildRoot(WALL_H);
-    const next = full ? roots.full : roots.low;
-    if (current && current !== next) current.visible = false;
-    next.visible = true; current = next; wallsFull = full;
+    const want = [rootOf(floor, full)];
+    // 睇緊上層：下面嘅樓層用完整牆身，睇落似一棟樓
+    floorList.filter(f => f.index < floorObj(floor).index).forEach(f => want.push(rootOf(f.id, true)));
+    shown.forEach(r => { if (!want.includes(r)) r.visible = false; });
+    want.forEach(r => { r.visible = true; });
+    shown = want; current = want[0]; wallsFull = full;
   }
 
   /* ---------- 設施標記（HTML，字體清楚，手機易撳） ---------- */
@@ -410,7 +478,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     const W = renderer.domElement.clientWidth, H = renderer.domElement.clientHeight;
     const cam2 = { x: camera.position.x, y: camera.position.z }, walking = mode === 'walk';
     const list = pins.map(p => {
-      v3.set(p.f.at.x, PIN_Y, p.f.at.y).project(camera);
+      v3.set(p.f.at.x, baseOf(fFloor(p.f)) + PIN_Y, p.f.at.y).project(camera);
       return { p, x: (v3.x + 1) / 2 * W, y: (1 - v3.y) / 2 * H, z: v3.z, d: Math.hypot(p.f.at.x - cam2.x, p.f.at.y - cam2.y) };
     }).sort((a, c) => (c.p.f.id === hi) - (a.p.f.id === hi) || (walking ? a.d - c.d : a.p.i - c.p.i));
     let dirty = false;
@@ -419,10 +487,10 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     const placed = obstacles.filter(el => el.getClientRects().length && !el.closest('[hidden]')).map(el => { const r = el.getBoundingClientRect(); return [r.left - cr.left - 4, r.top - cr.top - 4, r.right - cr.left + 4, r.bottom - cr.top + 4]; });
     const overlaps = r => placed.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
     list.forEach(({ p, x, y, z, d }) => {
-      let show = z < 1 && x > -40 && x < W + 40 && y > -20 && y < H + 60;
+      let show = onFloorF(p.f) && z < 1 && x > -40 && x < W + 40 && y > -20 && y < H + 60;
       let op = 1;
       if (show && walking) {
-        if (d > 1100 || lineBlocked(cam2, p.f.at, col)) show = false;
+        if (d > 1100 || lineBlocked(cam2, p.f.at, colOf(floor))) show = false;
         else op = d > 750 ? Math.max(0.25, 1 - (d - 750) / 350) : 1;
       }
       if (mode === 'tour' && hi && p.f.id !== hi) op = Math.min(op, 0.5);
@@ -483,11 +551,12 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     const r = dom.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    for (const h of ray.intersectObjects([current, ground], true)) {
+    const targets = [current].concat(stairsMesh ? [stairsMesh] : [], floorObj(floor).index === 0 ? [ground] : []);
+    for (const h of ray.intersectObjects(targets, true)) {
       let skip = false;
       for (let q = h.object; q; q = q.parent) if (q.userData?.noPick) { skip = true; break; }
       if (skip || h.object.material === M.glass || !h.object.visible) continue;
-      const f = facilityAt(facilities, { x: h.point.x, y: h.point.z });
+      const f = facilityAt(facilitiesOn(facilities, floor), { x: h.point.x, y: h.point.z });
       onPick?.(f ? f.id : null);
       return;
     }
@@ -538,31 +607,32 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
   const dirOf = (hx, hy, el) => { const L = Math.hypot(hx, hy) || 1; return V(hx / L * Math.cos(el), Math.sin(el), hy / L * Math.cos(el)); };
   // 全景：由南面斜上望，成個平面圖擺得入畫面（上面留位俾標記）。
   function overviewPose() {
-    const pts = [];
-    plan.rooms.forEach(r => r.pts.forEach(p => { pts.push(V(p.x, 0, p.y), V(p.x, LOW_H, p.y)); }));
-    return fitPose(pts, V(cx, 0, cz), dirOf(Math.sin(rad(-12)), Math.cos(rad(-12)), rad(58)), { x: 0.9, top: 0.72, bottom: -0.9 });
+    const pts = [], y0 = baseOf(floor);
+    plans[floor].rooms.forEach(r => r.pts.forEach(p => { pts.push(V(p.x, y0, p.y), V(p.x, y0 + LOW_H, p.y)); }));
+    return fitPose(pts, V(cx, y0, cz), dirOf(Math.sin(rad(-12)), Math.cos(rad(-12)), rad(58)), { x: 0.9, top: 0.72, bottom: -0.9 });
   }
   // 導覽每一站：由大廳中間望向設施（或者按 center.json 嘅 view），包住設施範圍同標記，唔俾字卡遮住。
   function viewPose(f) {
+    const plan = plans[fFloor(f)], y0 = baseOf(fFloor(f));
     let hx, hy, el = rad(50);
     if (f.view.from) {
       hx = f.view.from.x - f.at.x; hy = f.view.from.y - f.at.y;
       if (f.view.height) el = Math.atan2(f.view.height, Math.hypot(hx, hy) || 1);
     } else {
-      hx = plan.center.x - f.at.x; hy = plan.center.y - f.at.y;
+      hx = plan0.center.x - f.at.x; hy = plan0.center.y - f.at.y;
       if (Math.hypot(hx, hy) < 80) { hx = 0; hy = 1; }
       if (f.view.height && f.view.dist) el = Math.atan2(f.view.height, f.view.dist);
     }
     // 包住：設施範圍＋周圍最少 3 米（睇到環境）＋設施標記。
     const pts = [];
-    if (f.area) f.area.forEach(p => { pts.push(V(p.x, 0, p.y), V(p.x, LOW_H, p.y)); });
+    if (f.area) f.area.forEach(p => { pts.push(V(p.x, y0, p.y), V(p.x, y0 + LOW_H, p.y)); });
     for (let i = 0; i < 12; i++) {
       const a = i * Math.PI / 6, q = { x: f.at.x + Math.cos(a) * 300, y: f.at.y + Math.sin(a) * 300 };
-      if (insideBuilding(plan, q)) pts.push(V(q.x, 0, q.y)); // 只包大廈入面，唔好拍一大片外面
+      if (insideBuilding(plan, q)) pts.push(V(q.x, y0, q.y)); // 只包大廈入面，唔好拍一大片外面
     }
-    pts.push(V(f.at.x, PIN_Y + 30, f.at.y));
+    pts.push(V(f.at.x, y0 + PIN_Y + 30, f.at.y));
     const Hh = canvasHost.clientHeight || 1, bottom = Math.min(0.1, -1 + 2 * (inset / Hh) + 0.12);
-    const aim = f.area ? V(f.area.reduce((s, p) => s + p.x, 0) / f.area.length, 0, f.area.reduce((s, p) => s + p.y, 0) / f.area.length) : V(f.at.x, 0, f.at.y);
+    const aim = f.area ? V(f.area.reduce((s, p) => s + p.x, 0) / f.area.length, y0, f.area.reduce((s, p) => s + p.y, 0) / f.area.length) : V(f.at.x, y0, f.at.y);
     return fitPose(pts, aim, dirOf(hx, hy, el), { x: 0.86, top: 0.8, bottom });
   }
   let anim = null;
@@ -582,11 +652,11 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     const prev = mode;
     if (prev === 'walk') { W.k = {}; W.pad = {}; W.look = null; camera.rotation.order = 'XYZ'; camera.fov = 45; camera.updateProjectionMatrix(); minimap.toggleAttribute('hidden', true); }
     if (prev === 'tour') { tour.active = false; anim = null; }
-    if (prev === 'overview') savedOverview = { pos: camera.position.clone(), tgt: controls.target.clone() };
+    if (prev === 'overview') savedOverview = { pos: camera.position.clone(), tgt: controls.target.clone(), floor };
     mode = m;
     if (m === 'overview') {
       showWalls(!lowPref);
-      if (prev === 'walk') { const s = savedOverview || overviewPose(); camera.position.copy(s.pos); controls.target.copy(s.tgt); }
+      if (prev === 'walk') { const s = savedOverview && savedOverview.floor === floor ? savedOverview : overviewPose(); camera.position.copy(s.pos); controls.target.copy(s.tgt); }
       controls.enabled = true; controls.update(); highlight(hi);
     } else if (m === 'tour') {
       showWalls(false); controls.enabled = false;
@@ -604,13 +674,14 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
   const tour = { active: false, idx: 0, phase: 'idle', paused: false, dwell: 0 };
   function tourState() {
     const f = facilities[tour.idx];
-    return { active: tour.active, idx: tour.idx, total: facilities.length, fid: f?.id, phase: tour.phase, paused: tour.paused, progress: tour.phase === 'dwell' ? Math.min(1, tour.dwell / dwellSeconds(f)) : tour.phase === 'done' ? 1 : 0 };
+    return { active: tour.active, idx: tour.idx, total: facilities.length, fid: f?.id, floor: f ? fFloor(f) : floor, phase: tour.phase, paused: tour.paused, progress: tour.phase === 'dwell' ? Math.min(1, tour.dwell / dwellSeconds(f)) : tour.phase === 'done' ? 1 : 0 };
   }
   const emitTour = () => onTour?.(tourState());
   function tourGo(i) {
     tour.idx = Math.max(0, Math.min(facilities.length - 1, i));
     tour.phase = 'fly'; tour.dwell = 0; tour.paused = false; controls.enabled = false;
     const f = facilities[tour.idx];
+    if (f.floor !== 'all' && f.floor !== floor) setFloor(f.floor, { fly: false }); // 轉層，鏡頭會飛上／落去
     highlight(f.id);
     emitTour(); // 先更新字卡（高度會變），再計鏡頭位置
     const pose = viewPose(f);
@@ -638,18 +709,32 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
   function homePose() {
     let p = start.at, l = start.lookAt;
     if (!p) { const f0 = facilities[0]; p = f0 ? f0.at : { x: cx, y: cz }; }
-    if (!l) l = plan.center;
-    const q = resolveWalk({ x: p.x, y: p.y }, col);
+    if (!l) l = plan0.center;
+    const q = resolveWalk({ x: p.x, y: p.y }, colOf(floorList[0].id));
     return { x: q.x, y: q.y, yaw: Math.atan2(-(l.x - q.x), -(l.y - q.y)) };
   }
   function placeCam() {
-    camera.position.set(W.x, EYE_H, W.y); camera.rotation.set(W.pitch, W.yaw, 0);
+    camera.position.set(W.x, baseOf(floor) + EYE_H, W.y); camera.rotation.set(W.pitch, W.yaw, 0);
     drawMini();
     const now = performance.now();
-    if (now - W.lastEmit > 120) { W.lastEmit = now; onWalk?.({ x: W.x, y: W.y, yaw: W.yaw }); }
+    if (now - W.lastEmit > 120) { W.lastEmit = now; onWalk?.({ x: W.x, y: W.y, yaw: W.yaw, floor }); }
   }
-  function walkHome() { W.home = W.home || homePose(); Object.assign(W, { x: W.home.x, y: W.home.y, yaw: W.home.yaw, pitch: 0, started: true }); placeCam(); }
-  function walkTo(x, y) { const p = resolveWalk({ x, y }, col); W.x = p.x; W.y = p.y; placeCam(); }
+  function walkHome() {
+    if (floor !== floorList[0].id) setFloor(floorList[0].id, { fly: false });
+    W.home = W.home || homePose(); Object.assign(W, { x: W.home.x, y: W.home.y, yaw: W.home.yaw, pitch: 0, started: true }); placeCam();
+  }
+  function walkTo(x, y) { const p = resolveWalk({ x, y }, colOf(floor)); W.x = p.x; W.y = p.y; placeCam(); }
+  // 行入樓梯口：轉層，企喺樓梯另一頭（面向樓梯外面）
+  function checkStairs() {
+    if (!SG) return;
+    const which = floor === SG.lower.floor && SG.inTrigger(W, 'lower') ? 'upper' : floor === SG.upper.floor && SG.inTrigger(W, 'upper') ? 'lower' : null;
+    if (!which) return;
+    const to = SG[which];
+    setFloor(to.floor, { fly: false });
+    Object.assign(W, { x: to.arrive.x, y: to.arrive.y, yaw: to.arrive.yaw, pitch: 0 });
+    placeCam();
+    onStairs?.(to.floor, floorObj(to.floor).name);
+  }
   function walkUpdate(dt) {
     const k = W.k, pd = W.pad;
     const f = (k.f || pd.f ? 1 : 0) - (k.b || pd.b ? 1 : 0), st = (k.r || pd.r ? 1 : 0) - (k.l || pd.l ? 1 : 0), tr = (k.tr || pd.tr ? 1 : 0) - (k.tl || pd.tl ? 1 : 0);
@@ -658,8 +743,9 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     if (f || st) {
       const n2 = Math.hypot(f, st) || 1, sp = 130 * (W.run ? 2 : 1) * dt, sy = Math.sin(W.yaw), cy = Math.cos(W.yaw);
       const to = { x: W.x + ((-sy * f + cy * st) / n2) * sp, y: W.y + ((-cy * f - sy * st) / n2) * sp };
-      const p = stepWalk({ x: W.x, y: W.y }, to, col);
+      const p = stepWalk({ x: W.x, y: W.y }, to, colOf(floor));
       W.x = p.x; W.y = p.y;
+      checkStairs();
     }
     placeCam();
   }
@@ -691,6 +777,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
   // 小地圖：撳一下可以傳送。
   const r2 = n => Math.round(n * 10) / 10;
   function buildMini() {
+    const plan = plans[floor];
     const MW = 132, pad = 6, bw = MW - pad * 2, sc = bw / Math.max(b.w, b.h);
     W.mm = { sc, ox: pad + (bw - b.w * sc) / 2 - b.x * sc, oy: pad - b.y * sc, h: Math.round(b.h * sc + pad * 2), w: MW };
     const X = x => r2(x * sc + W.mm.ox), Y = y => r2(y * sc + W.mm.oy);
@@ -700,7 +787,8 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     plan.rooms.forEach(r => { h += `<polygon class="mm-room" points="${r.pts.map(q => X(q.x) + ',' + Y(q.y)).join(' ')}"/>`; });
     plan.items.forEach(it => { if (['door', 'door2', 'window'].includes(it.type)) return; h += `<polygon class="mm-item" points="${corners(it).map(q => X(q.x) + ',' + Y(q.y)).join(' ')}"/>`; });
     plan.walls.forEach(w => { h += `<line class="${w.glass ? 'mm-glass' : 'mm-wall'}" x1="${X(w.a.x)}" y1="${Y(w.a.y)}" x2="${X(w.b.x)}" y2="${Y(w.b.y)}"/>`; });
-    facilities.forEach(f => { h += `<circle class="mm-f" cx="${X(f.at.x)}" cy="${Y(f.at.y)}" r="3.2" style="fill:${f.color}"/>`; });
+    if (SG) h += `<polygon class="mm-stairs" points="${SG.footprint.map(q => X(q.x) + ',' + Y(q.y)).join(' ')}"/>`;
+    facilitiesOn(facilities, floor).forEach(f => { if (!f.stairs) h += `<circle class="mm-f" cx="${X(f.at.x)}" cy="${Y(f.at.y)}" r="3.2" style="fill:${f.color}"/>`; });
     h += '<g class="mm-me"><path d="M0 -8 L5 5 L0 2 L-5 5 Z"/></g>';
     minimap.innerHTML = h; drawMini();
   }
@@ -733,7 +821,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     }
     if (mode === 'walk') walkUpdate(dt);
     if (hi && fById[hi] && !fById[hi].area && !reduceMotion()) { const s = 1 + 0.08 * Math.sin(clock * 4); fxBy[hi].scale.set(s, s, 1); }
-    if (current.userData.ceiling) current.userData.ceiling.visible = camera.position.y < WALL_H - 5;
+    shown.forEach(r => { if (r.userData.ceiling) r.userData.ceiling.visible = camera.position.y < r.position.y + WALL_H - 5; });
     renderer.render(scene, camera);
     updatePins();
     requestAnimationFrame(frame);
@@ -745,16 +833,35 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
   }
   document.addEventListener('visibilitychange', () => { if (document.hidden && running) { running = false; setActive.resumeOnShow = true; } else if (!document.hidden && setActive.resumeOnShow) { setActive.resumeOnShow = false; setActive(true); } });
 
-  // 開始：矮牆全貌。
+  // 轉層：overview 時顯示成層嘅全景（一定見晒嗰層設施）；導覽同漫遊自己處理鏡頭。
+  function setFloor(id, opts = {}) {
+    if (!floorList.some(f => f.id === id) || id === floor) return;
+    floor = id;
+    showWalls(mode === 'walk' ? true : mode === 'overview' ? !lowPref : false);
+    updateFx();
+    if (mode === 'overview') {
+      const pose = overviewPose();
+      if (opts.fly !== false) { controls.enabled = false; flyTo(pose, 1); }
+      else { anim = null; camera.position.copy(pose.pos); controls.target.copy(pose.tgt); controls.update(); }
+    }
+    if (mode === 'walk') buildMini();
+    pins.forEach(p => { p.last = ''; });
+    onFloor?.(id);
+  }
+
+  // 開始：地下，矮牆全貌。
   showWalls(false);
+  updateFx();
   const p0 = overviewPose(); camera.position.copy(p0.pos); controls.target.copy(p0.tgt); controls.update();
   highlight(null);
 
   return {
     setActive, setMode, get mode() { return mode; }, tour: tourApi, highlight,
+    setFloor, get floor() { return floor; }, floors: floorList,
     focus(fid) {
       const f = fById[fid]; if (!f) return;
       if (mode !== 'overview') setMode('overview');
+      if (f.floor !== 'all' && f.floor !== floor) setFloor(f.floor, { fly: false });
       highlight(fid);
       const pose = viewPose(f); controls.enabled = false; flyTo(pose, flyDur(pose));
     },
@@ -768,15 +875,15 @@ export function createView3D({ canvasHost, pinHost, minimap, plan, facilities, s
     get fullWalls() { return wallsFull; },
     walkPad(key, down) { W.pad[key] = down; },
     walkHome() { if (mode === 'walk') walkHome(); },
-    walkState: () => ({ x: W.x, y: W.y, yaw: W.yaw, pitch: W.pitch }),
+    walkState: () => ({ x: W.x, y: W.y, yaw: W.yaw, pitch: W.pitch, floor }),
     walkTo,
     // 測試用：即刻畫一格，等測試可以讀到畫面。
     renderNow() { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/png'); },
     setYaw(y) { W.yaw = y; W.pitch = 0; placeCam(); },
     // 測試用：平面圖一點（cm）喺畫面上嘅位置（px，相對 3D 畫面）。
-    screenOf(x, y, h = 0) { const v = new T.Vector3(x, h, y).project(camera), c = renderer.domElement; return { x: (v.x + 1) / 2 * c.clientWidth, y: (1 - v.y) / 2 * c.clientHeight }; },
+    screenOf(x, y, h = 0) { const v = new T.Vector3(x, baseOf(floor) + h, y).project(camera), c = renderer.domElement; return { x: (v.x + 1) / 2 * c.clientWidth, y: (1 - v.y) / 2 * c.clientHeight }; },
     cameraState: () => ({ x: camera.position.x, y: camera.position.y, z: camera.position.z }),
     pinState: () => pins.map(p => ({ id: p.f.id, hidden: p.el.hidden, compact: p.el.classList.contains('compact') })),
-    collision: col,
+    get collision() { return colOf(floor); },
   };
 }

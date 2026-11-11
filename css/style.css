@@ -324,3 +324,28 @@ h1, h2, h3, p { margin: 0; }
 .pin-leaders line { stroke-width: 2.5; stroke-linecap: round; opacity: .85; }
 .pin-leaders circle { stroke: #fff; stroke-width: 2; }
 .fatal h2 { font-size: 24px; font-weight: 800; }
+
+/* 樓梯（2D） */
+.p-stairs .st-bg { fill: #EFDCC0; stroke: #8A6A4E; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.p-stairs .st-land { fill: #E6CDAA; }
+.p-stairs .st-tread { stroke: #9C7B5C; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.p-stairs .st-spine { fill: #8A6A4E; }
+.p-stairs .st-arrow { fill: none; stroke: #C2541F; stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.p-stairs .st-head { fill: #C2541F; }
+.p-stairs.upper .st-bg, .p-stairs.upper .st-land { fill-opacity: .55; }
+.p-stairs .st-rail { fill: none; stroke: #5B86A8; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.mm-stairs { fill: #E6CDAA; stroke: #8A6A4E; stroke-width: 1; }
+/* 樓層掣 */
+.floor-seg { position: absolute; top: 10px; left: 10px; z-index: 3; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255, 255, 255, .95); border: 2px solid var(--line); box-shadow: 0 2px 8px rgba(62, 43, 32, .12); }
+.floor-seg button { min-height: 44px; min-width: 64px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font-weight: 800; font-size: 17px; color: var(--muted); cursor: pointer; }
+.floor-seg button[aria-pressed="true"] { background: var(--primary); color: var(--primary-ink); }
+.plan-floors { display: flex; gap: 8px; }
+.plan-floors button { flex: 1; min-height: 50px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); font-size: 18px; font-weight: 800; color: var(--muted); cursor: pointer; }
+.plan-floors button[aria-selected="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+.plan-floor { display: flex; flex-direction: column; gap: 12px; }
+.walk-floor { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); pointer-events: none; background: var(--primary); color: #fff; font-weight: 800; font-size: 17px; padding: 6px 16px; border-radius: 999px; box-shadow: 0 2px 8px rgba(62, 43, 32, .2); }
+.tag.floor { background: #E3EEF7; color: #2F5877; }
+.floor-flash { position: absolute; inset: 0; z-index: 7; pointer-events: none; background: #FFF4E4; opacity: 0; display: grid; place-items: center; font-size: 26px; font-weight: 800; color: var(--primary); }
+.floor-flash.go { animation: floorflash 1.1s ease-out; }
+@keyframes floorflash { 0% { opacity: .95; } 55% { opacity: .85; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .floor-flash.go { animation-duration: .01s; } }
