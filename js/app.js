@@ -129,7 +129,7 @@ function createPlans() {
 }
 
 /* ---------- 資料卡 ---------- */
-function openCard(fid) {
+function openCard(fid, itemType = null) {
   const f = S.data.facilities.find(x => x.id === fid);
   if (!f) return;
   if (S.view && S.view.mode === 'tour') S.view.tour.pause();
@@ -149,7 +149,17 @@ function openCard(fid) {
   $('#card-rows').innerHTML = f.stairs
     ? `<div><dt>🪜 連接</dt><dd>${esc(S.floors.map(x => x.name).join(' ⇄ '))}</dd></div><div><dt>🚶 漫遊時</dt><dd>行入樓梯口就會上落樓</dd></div>`
     : row('🕒 開放時間', f.hours) + row('📝 預約方法', f.booking);
+  // 設備同使用規矩：每件設備一個可以撳開嘅說明框
+  const eq = $('#card-equip');
+  eq.hidden = !f.equipment.length;
+  eq.innerHTML = f.equipment.length ? `<h3>設備同使用規矩（${f.equipment.length} 項）</h3><p class="eq-tip">撳名稱睇使用規矩；喺 3D 地圖撳件設備都會跳嚟呢度。</p>` + f.equipment.map((e, i) => `<details data-eq="${esc(e.type)}"${e.type && e.type === itemType ? ' open' : ''}>
+      <summary><span aria-hidden="true">${esc(e.icon || '🔧')}</span> ${esc(e.name)}</summary>
+      ${e.note ? `<p class="eq-note">${esc(e.note)}</p>` : ''}
+      ${e.rules.length ? `<ol>${e.rules.map(r => `<li>${esc(r)}</li>`).join('')}</ol>` : '<p class="pending">使用規矩稍後補上。</p>'}
+    </details>`).join('') : '';
   openSheet('#card');
+  const hit = itemType && eq.querySelector('details[open]');
+  if (hit) setTimeout(() => hit.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 350);
   S.view?.highlight(fid);
   S.plan2d?.highlight(fid);
 }
@@ -260,7 +270,7 @@ async function init3D() {
       canvasHost: $('#v3-canvas'), pinHost: $('#v3-pins'), minimap: $('#minimap'),
       plans: S.plans, floors: S.floors, facilities: S.data.facilities, start: S.data.start,
       obstacles: [...document.querySelectorAll('.v3-tools button, .floor-seg, .walkui button, .dpad, .turnpad, .minimap, .walk-floor')],
-      onPick: fid => { if (fid) openCard(fid); },
+      onPick: (fid, itemType) => { if (fid) openCard(fid, itemType); },
       onTour: renderTour,
       onWalk: p => S.plan2d.setMe(p.x, p.y, p.yaw, p.floor),
       onFloor: setFloorUI,

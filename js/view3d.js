@@ -38,7 +38,7 @@ const MAT_SPEC = {
   machine: [0xF6F1EA], light: [0xF7F0E5], ground: [0xF2E6D3],
   // 設施傢俬用色
   chrome: [0xC9CED2], red: [0xD9573F], blue: [0x5B8FC9], green: [0x79B86F], yellow: [0xF2C14E], pink: [0xEE9FB0],
-  white: [0xFBFAF7], sofa: [0x958A7E], cushion: [0xACA196], leather: [0x6F6A66], rubber: [0x6E9E96], black: [0x35302C], glassdark: [0x6F93AD],
+  white: [0xFBFAF7], sofa: [0x8A7A62], cushion: [0x9A8A70], greyfab: [0xA9A8A4], leather: [0x6F6A66], rubber: [0x6E9E96], black: [0x35302C], glassdark: [0x6F93AD],
   stair: [0xD8B48A], slab: [0xE9DCC8], rugc: [0x8C7C34], rugc2: [0x9C8C42], tunnel: [0x8FC1E3], kiosk: [0xF3EEE6],
   stainless: [0xD3D8DC], graphite: [0x5C5D60], slate: [0x8EA3B5], birch: [0xE8D3B2], mirror: [0xE3ECF2], periwinkle: [0x8496CF], orange: [0xE07B39], canvas: [0xEADCC3],
   sage: [0x9DB58A], teal: [0x2F6153], denim: [0x5B87B8], baffle: [0x3A3633], step: [0xE6DCCD],
@@ -231,7 +231,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         break;
       }
       case 'fridge': {
-        box3(g, w, H, d, 0, 0, 0, it.type === 'fridge4' ? 'stainless' : 'white');
+        box3(g, w, H, d, 0, 0, 0, it.type === 'fridge4' ? 'stainless' : it.type === 'fridge_black' ? 'black' : 'white');
         if (it.type === 'fridge4') box3(g, 1, H - 6, 1, 0, 3, d / 2 + 0.5, 'dark', false);
         box3(g, w + 0.5, 1.5, 1, 0, H * 0.66, d / 2, 'steel', false);
         box3(g, 3, 45, 4, w / 2 - 8, H * 0.25, d / 2 + 2, 'chrome', false);
@@ -239,8 +239,9 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         break;
       }
       case 'sofa': {
+        if (it.type === 'loveseat') { box3(g, w, 40, d, 0, 0, 0, 'greyfab'); box3(g, w, 45, 18, 0, 40, -d / 2 + 9, 'greyfab'); box3(g, 10, 20, d, -w / 2 + 5, 40, 0, 'greyfab'); box3(g, 10, 20, d, w / 2 - 5, 40, 0, 'greyfab'); break; }
         box3(g, w, 40, d, 0, 0, 0, 'sofa');
-        const n = w > 150 ? 3 : 2, cw = (w - 24) / n;
+        const n = w > 240 ? 4 : w > 150 ? 3 : 2, cw = (w - 24) / n;
         for (let i = 0; i < n; i++) box3(g, cw - 2, 12, d - 24, -w / 2 + 12 + cw * (i + 0.5), 40, 8, 'cushion');
         box3(g, w, 45, 20, 0, 40, -d / 2 + 10, 'sofa');
         box3(g, 12, 22, d, -w / 2 + 6, 40, 0, 'sofa'); box3(g, 12, 22, d, w / 2 - 6, 40, 0, 'sofa');
@@ -337,7 +338,8 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, H); sh.lineTo(-w / 2, H); sh.lineTo(-w / 2, 0);
         const geo = new T.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false }); geo.translate(0, 0, -d / 2);
         g.add(new T.Mesh(geo, mat('sage')));
-        for (const [cx, cy, r] of [[w / 2 - 70, 105, 55], [-w / 2 + 50, 200, 30]]) for (const z of [-1, 1]) {   // 兩面都有圓鏡
+        const R = Math.min(55, (w - 20) / 2);
+        for (const [cx, cy, r] of (w >= 180 ? [[w / 2 - 70, 105, R], [-w / 2 + 50, 200, 30]] : [[0, 110, R]])) for (const z of [-1, 1]) {   // 兩面都有圓鏡
           const m = cyl3(g, r, r, 0.6, 0, 0, 0, 'mirror', 40); m.rotation.x = Math.PI / 2; m.position.set(cx, cy, z * (d / 2 + 0.4));
         }
         break;
@@ -370,8 +372,8 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         for (let i = 0; i < 5; i++) box3(g, w, 1.5, d / 5, 0, 0, -d / 2 + d / 10 + i * d / 5, i % 2 ? 'cushion' : 'white', false);
         break;
       case 'orangearch': {                                            // 橙色牆板：左下角係大弧
-        const sh = new T.Shape(), R = Math.min(w, H) * 0.7;
-        sh.moveTo(-w / 2, R); sh.lineTo(-w / 2, H); sh.lineTo(w / 2, H); sh.lineTo(w / 2, 0); sh.lineTo(-w / 2 + R, 0); sh.absarc(-w / 2 + R, R, R, -Math.PI / 2, Math.PI, true);
+        const sh = new T.Shape(), R = w / 2, y0 = 45;
+        sh.moveTo(-R, y0 + R); sh.lineTo(-R, H); sh.lineTo(R, H); sh.lineTo(R, y0 + R); sh.absarc(0, y0 + R, R, 0, Math.PI, true);
         const m = new T.Mesh(new T.ExtrudeGeometry(sh, { depth: 2, bevelEnabled: false, curveSegments: 20 }), mat('orange')); m.position.z = d / 2 - 2; g.add(m);
         break;
       }
@@ -400,6 +402,42 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
         break;
       case 'paykiosk':                                               // 牆身洗衣付款機
         box3(g, w, H, d, 0, 110, 0, 'white'); box3(g, w - 8, 26, 1, 0, 125, d / 2, 'glassdark', false); box3(g, 14, 7, 2, 0, 113, d / 2, 'yellow', false);
+        break;
+      case 'counter':                                                 // 木櫃身、不鏽鋼枱面（冇盆冇爐）
+        box3(g, w, H - 4, d - 4, 0, 0, -2, 'wood'); box3(g, w + 2, 4, d + 2, 0, H - 4, 0, 'stainless');
+        break;
+      case 'island':                                                  // 中島：一邊木櫃、一邊枱下雪櫃（本地 +x）
+        box3(g, w + 2, 4, d + 2, 0, H - 4, 0, 'stainless');
+        box3(g, w - 70, H - 22, d - 10, -35, 14, 0, 'wood'); box3(g, 62, H - 22, d - 14, w / 2 - 36, 14, 0, 'stainless');
+        for (let i = 0; i < 5; i++) box3(g, 1, 22, 2, w / 2 - 4.5, 24, -8 + i * 4, 'dark', false);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) box3(g, 4, H - 4, 4, sx * (w / 2 - 3), 0, sz * (d / 2 - 3), 'stainless', false);
+        break;
+      case 'steeltable':
+        box3(g, w, 3, d, 0, H - 3, 0, 'stainless');
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) box3(g, 3, H - 3, 3, sx * (w / 2 - 3), 0, sz * (d / 2 - 3), 'stainless', false);
+        cyl3(g, 14, 13, 22, 0, H, 0, 'white', 20);                  // 電飯煲
+        break;
+      case 'bin': cyl3(g, w / 2, w / 2, H, 0, 0, 0, 'stainless', 20); cyl3(g, w / 2 + 0.5, w / 2 + 0.5, 3, 0, H, 0, 'dark', 20); break;
+      case 'appl': {                                                  // 枱面／牆身嘅細電器同配件
+        const y0 = c.base || 0;
+        switch (it.type) {
+          case 'hob': box3(g, w, H, d, 0, y0, 0, 'black', false); for (const sx of [-1, 1]) { const r = cyl3(g, 9, 9, 0.4, sx * w / 4, y0 + H, 0, 'dark', 20); r.userData.noPick = false; } break;
+          case 'oven_black': box3(g, w, H, d, 0, y0, 0, 'black'); box3(g, w - 10, 3, 2, 0, y0 + H - 12, d / 2, 'stainless', false); box3(g, w - 14, H - 20, 1, 0, y0 + 4, d / 2, 'glassdark', false); break;
+          case 'steam_oven': box3(g, w, H, d, 0, y0, 0, 'white'); box3(g, w - 14, H - 14, 1, -4, y0 + 5, d / 2, 'dark', false); break;
+          case 'rice_cooker': cyl3(g, w / 2, w / 2 - 1, H, 0, y0, 0, 'white', 20); break;
+          case 'island_riser': box3(g, w * 0.5, H - 3, d - 6, 0, y0, 0, 'wood'); box3(g, w, 3, d, 0, y0 + H - 3, 0, 'stainless');
+            cyl3(g, 6, 6, 26, w / 2 + 12, y0, 0, 'white', 14); break;   // 廚房紙
+          case 'utensil_rail': if (low) return null; box3(g, w, 2, 2, 0, y0, 0, 'stainless', false);
+            for (let i = 0; i < 8; i++) box3(g, 22, 16, 1, -w / 2 + 40 + i * (w - 80) / 7, y0 - 16, 0, i % 3 === 1 ? 'pink' : 'steel', false); break;
+          case 'wall_clock': { if (low) return null; const k = cyl3(g, w / 2, w / 2, 3, 0, 0, 0, 'green', 24); k.rotation.x = Math.PI / 2; k.position.set(0, y0 + w / 2, 0);
+            const fc = cyl3(g, w / 2 - 3, w / 2 - 3, 3.4, 0, 0, 0, 'white', 24); fc.rotation.x = Math.PI / 2; fc.position.set(0, y0 + w / 2, 0.3); break; }
+          case 'orange_window': if (low) { box3(g, w, 2, d, 0, 108, 0, 'orange', false); break; } { const m = new T.Mesh(new T.BoxGeometry(w, H, d), new T.MeshStandardMaterial({ color: 0xE8792E, transparent: true, opacity: 0.78, roughness: 0.3 })); m.position.set(0, y0 + H / 2, 0); g.add(m); } break;
+        }
+        break;
+      }
+      case 'slatwall':                                                // 木條牆，中間一條鏡面窗（廚房玻璃窗嘅另一面）
+        box3(g, w, 110, d, 0, 0, 0, 'wood', false); box3(g, w, Math.max(1, Math.min(H, wallH) - 190), d, 0, 190, 0, 'wood', false);
+        if (!low) { box3(g, w * 0.72, 80, 1, 0, 110, d / 2, 'mirror', false); for (let x = -w / 2 + 6; x < w / 2; x += 12) { box3(g, 3, 110, 2, x, 0, d / 2 + 1, 'top', false); box3(g, 3, H - 190, 2, x, 190, d / 2 + 1, 'top', false); } }
         break;
       case 'padwall': box3(g, w, H, d, 0, 0, 0, 'sage'); break;
       case 'kiosk': {                                                 // 健康站：半圓白枱、綠色腳、量血壓機、藍色私隱屏風
@@ -453,6 +491,7 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
       default: box3(g, w, H, d, 0, 0, 0, itemMat(it));
     }
     const out = new T.Group(); out.add(g);
+    out.userData.ceil = g.userData.ceil; out.userData.itemType = it.type;
     if (it.lay) {
       if (it.lay === 1) g.rotation.z = Math.PI / 2; else g.rotation.x = -Math.PI / 2;
       out.updateMatrixWorld(true);
@@ -683,7 +722,9 @@ export function createView3D({ canvasHost, pinHost, minimap, plans, floors, faci
       for (let q = h.object; q; q = q.parent) if (q.userData?.noPick) { skip = true; break; }
       if (skip || h.object.material === M.glass || !h.object.visible) continue;
       const f = facilityAt(facilitiesOn(facilities, floor), { x: h.point.x, y: h.point.z });
-      onPick?.(f ? f.id : null);
+      let itemType = null;
+      for (let q = h.object; q && !itemType; q = q.parent) itemType = q.userData?.itemType || null;
+      onPick?.(f ? f.id : null, itemType);
       return;
     }
     onPick?.(null);

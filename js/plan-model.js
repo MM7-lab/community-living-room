@@ -81,12 +81,28 @@ export const CATALOG = {
   white_cabinet: { w: 100, d: 40, ht: 240, sym: 'cabinet', name: '白色高櫃' },
   steel_sink: { w: 150, d: 60, ht: 90, sym: 'steelsink', name: '不鏽鋼洗手盆枱' },
   fridge4: { w: 120, d: 70, ht: 200, sym: 'fridge', name: '四門雪櫃' },
-  dumbbell_rack: { w: 55, d: 50, ht: 100, sym: 'dumbbell', name: '啞鈴架' },
+  dumbbell_rack: { w: 55, d: 50, ht: 100, sym: 'dumbbell', name: '啞鈴架', deco: true },   // 喺樓梯底凹位，漫遊行唔入
   bench: { w: 120, d: 50, ht: 45, sym: 'bench', name: '軟墊長櫈' },
   orange_arch: { w: 110, d: 2, ht: 235, sym: 'orangearch', name: '橙色牆板', deco: true },
   mirror_niche: { w: 45, d: 2, ht: 110, sym: 'niche', name: '弧形鏡櫃', deco: true },
   hood: { w: 300, d: 65, ht: 45, sym: 'hood', name: '抽油煙罩', deco: true },
   wall_oven: { w: 70, d: 55, ht: 70, sym: 'walloven', name: '蒸焗爐（牆架）', deco: true },
+  // 廚房（按現場相片）
+  loveseat: { w: 150, d: 80, ht: 85, sym: 'sofa', name: '細梳化' },
+  slat_wall: { w: 330, d: 4, ht: 240, sym: 'slatwall', name: '木條牆', deco: true },
+  counter: { w: 150, d: 60, ht: 90, sym: 'counter', name: '工作枱' },
+  island: { w: 290, d: 120, ht: 90, sym: 'island', name: '中島工作枱' },
+  fridge_black: { w: 60, d: 62, ht: 125, sym: 'fridge', name: '雪櫃（黑色）' },
+  steel_table: { w: 60, d: 55, ht: 60, sym: 'steeltable', name: '不鏽鋼矮枱（電飯煲）' },
+  pedal_bin: { w: 30, d: 30, ht: 62, sym: 'bin', name: '腳踏垃圾桶' },
+  hob: { w: 58, d: 50, ht: 1.5, sym: 'appl', base: 90, name: '電磁爐', deco: true },
+  oven_black: { w: 58, d: 45, ht: 36, sym: 'appl', base: 90, name: '焗爐', deco: true },
+  steam_oven: { w: 48, d: 40, ht: 32, sym: 'appl', base: 90, name: '蒸焗爐', deco: true },
+  rice_cooker: { w: 28, d: 28, ht: 24, sym: 'appl', base: 90, name: '電飯煲', deco: true },
+  island_riser: { w: 120, d: 32, ht: 24, sym: 'appl', base: 90, name: '枱面層架', deco: true },
+  utensil_rail: { w: 480, d: 3, ht: 4, sym: 'appl', base: 135, name: '掛牆用具桿', deco: true },
+  wall_clock: { w: 30, d: 4, ht: 30, sym: 'appl', base: 190, name: '掛鐘', deco: true },
+  orange_window: { w: 240, d: 10, ht: 80, sym: 'appl', base: 110, name: '橙色玻璃窗', deco: true },
   tv_niche: { w: 210, d: 2, ht: 138, sym: 'tvniche', name: '電視凹位', deco: true },
   upper_wood: { w: 100, d: 40, ht: 38, sym: 'upper', name: '木吊櫃', deco: true },
   pay_kiosk: { w: 35, d: 8, ht: 45, sym: 'paykiosk', name: '洗衣付款機', deco: true },
@@ -395,6 +411,11 @@ export function normalizeCenter(raw, plans) {
       tour: str(f.tour, 400), seconds: isNum(f.seconds) ? Math.min(60, Math.max(3, +f.seconds)) : null,
       staffOnly: f.staffOnly === true, tentative: f.tentative === true, highlight: f.highlight === true, at: at || { x: 0, y: 0 }, area, radius: isNum(f.radius) ? +f.radius : 150, view, color,
       floor, stairs,
+      // 設備同使用規矩：type 對應 3D 入面嘅傢俬類型（撳件嘢會跳去呢項）
+      equipment: (Array.isArray(f.equipment) ? f.equipment : []).filter(e => e && str(e.name, 60)).slice(0, 40).map(e => ({
+        type: str(e.type, 40), name: str(e.name, 60), icon: str(e.icon, 8), note: str(e.note, 200),
+        rules: (Array.isArray(e.rules) ? e.rules : []).map(r => str(r, 200)).filter(Boolean).slice(0, 12),
+      })),
     });
     if (f.photo && !safeUrl(f.photo)) errors.push(`${label}嘅相片路徑（photo）唔安全或者唔正確，請用 photos/xxx.jpg。`);
     // 設施傢俬：dx／dy 係相對設施位置（at）嘅距離（cm），設施搬位傢俬會跟住搬。
@@ -508,7 +529,7 @@ export function allFurnitureProblems(plans, data) {
     }).filter(Boolean);
     furnitureProblems(plan, data.facilities.filter(f => f.floor === fl.id), obs).forEach(m => out.push(pre + m));
     obs.forEach(o => plan.items.forEach(it => {
-      if (it.type === 'window' || it.type === 'tv') return;
+      if (it.type === 'window' || it.type === 'tv' || CATALOG[it.type]?.deco) return;
       if (rectsOverlap(o, it)) out.push(`${pre}${o.label}同原有${it.type === 'door' || it.type === 'door2' ? '門' : '傢俬'}（${it.id}）重疊。`);
     }));
   });

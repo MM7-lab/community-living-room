@@ -29,7 +29,7 @@ test('設施資料冇錯：入口第一站、官方 8 項齊晒、分兩層', ()
   const d = normalizeCenter(center, plans);
   assert.deepEqual(d.errors, []);
   assert.deepEqual(d.floors.map(f => f.name), ['地下', '一樓']);
-  assert.equal(d.facilities[0].id, 'entrance');
+  assert.equal(d.facilities[0].id, 'side-entrance', '導覽第一站係正門（接待處旁）');
   const names = d.facilities.map(f => f.name);
   ['社區廚房', '洗衣及乾衣機', '按摩椅', '健身設備', '大電視', '圖書閣', '兒童遊樂室', '咖啡沖調設備區'].forEach(n => assert.ok(names.includes(n), `缺少 ${n}`));
   assert.equal(new Set(d.facilities.map(f => f.color)).size, d.facilities.length, '設施顏色重複');
@@ -87,7 +87,7 @@ test('實心牆會遮住設施標記，玻璃牆唔會', () => {
 test('撳平面圖揀設施：點優先，再睇範圍，淨係揀同一層', () => {
   const d = normalizeCenter(center, plans), G = facilitiesOn(d.facilities, 'G'), F1 = facilitiesOn(d.facilities, '1F');
   assert.equal(facilityAt(G, { x: 420, y: 1515 })?.id, 'entrance');
-  assert.equal(facilityAt(G, { x: 510, y: 935 })?.id, 'massage');
+  assert.equal(facilityAt(G, { x: 528, y: 1020 })?.id, 'massage');
   assert.equal(facilityAt(G, { x: -300, y: 900 })?.id, 'play');
   assert.equal(facilityAt(G, { x: 300, y: 1250 })?.id, 'dining');
   assert.equal(facilityAt(G, { x: 30, y: 1000 })?.id, 'living');
@@ -119,7 +119,7 @@ test('資料檢查：常見錯誤有清楚中文提示', () => {
 
 test('設施傢俬同樓梯：每層都冇撞牆、冇撞嘢、冇擋門', () => {
   const d = normalizeCenter(center, plans);
-  ['coffee', 'kids', 'gym'].forEach(id => assert.ok(d.facilities.find(f => f.id === id).furniture.length > 0, `${id} 冇傢俬`));
+  ['coffee', 'kids', 'play'].forEach(id => assert.ok(d.facilities.find(f => f.id === id).furniture.length > 0, `${id} 冇傢俬`));
   assert.deepEqual(allFurnitureProblems(plans, d), []);
 });
 
@@ -150,9 +150,9 @@ test('設施傢俬：放錯位會俾檢查捉到（撞牆、擋門、擋樓梯�
 
 test('設施傢俬：跟住設施位置搬', () => {
   const moved = JSON.parse(JSON.stringify(center));
-  moved.facilities.find(f => f.id === 'gym').at[1] += 30;
-  const a = normalizeCenter(center, plans).facilities.find(f => f.id === 'gym').furniture[0];
-  const b = normalizeCenter(moved, plans).facilities.find(f => f.id === 'gym').furniture[0];
+  moved.facilities.find(f => f.id === 'play').at[1] += 30;
+  const a = normalizeCenter(center, plans).facilities.find(f => f.id === 'play').furniture[0];
+  const b = normalizeCenter(moved, plans).facilities.find(f => f.id === 'play').furniture[0];
   assert.equal(b.y - a.y, 30);
   assert.equal(b.x, a.x);
 });

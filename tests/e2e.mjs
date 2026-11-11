@@ -138,7 +138,7 @@ await check('3. 自動導覽由入口開始，順序行晒，可以暫停同跳�
   await page.click('[data-tab="tour"]');
   await page.waitForFunction(() => window.__clr.S.view.tour.state().active);
   let st = await page.evaluate(() => window.__clr.S.view.tour.state());
-  assert.equal(st.fid, 'entrance', `第一站係 ${st.fid}`);
+  assert.equal(st.fid, 'side-entrance', `第一站係 ${st.fid}`);
   await page.waitForFunction(() => window.__clr.S.view.tour.state().phase === 'dwell', null, { timeout: 30000 });
   await page.screenshot({ path: join(OUT, '03-tour-entrance.png') });
   // 暫停：時間唔再行

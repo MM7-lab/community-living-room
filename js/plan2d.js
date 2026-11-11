@@ -44,7 +44,19 @@ function symbol(sym, w, h, type = '') {
     case 'armchair': return rect(X, Y, w, h, 'f-sofa', 12) + rect(X + 10, Y + 16, w - 20, h - 20, 'f-cushion', 6);
     case 'tunnel': return rect(X, Y, w, h, 'f-tunnel', w / 2) + `<circle class="f-line" cx="0" cy="${r2(Y + w / 2)}" r="${r2(w / 2 - 6)}"/>`;
     case 'upper': return rect(X, Y, w, h, 'f-upper', 2);
-    case 'ring': case 'acoustic': case 'baffle': case 'orangearch': case 'niche': case 'walloven': case 'padwall': case 'paykiosk': case 'tvniche': return '';
+    case 'ring': case 'acoustic': case 'baffle': case 'orangearch': case 'niche': case 'walloven': case 'padwall': case 'paykiosk': case 'tvniche': case 'slatwall': return '';
+    case 'counter': return rect(X, Y, w, h, 'f-steel', 3);
+    case 'island': return rect(X, Y, w, h, 'f-steel', 3) + rect(X + w - 66, Y + 6, 60, h - 12, 'f-line', 2);
+    case 'steeltable': return rect(X, Y, w, h, 'f-steel', 2) + `<circle class="f-white" cx="0" cy="0" r="13"/>`;
+    case 'bin': return `<circle class="f-steel" cx="0" cy="0" r="${r2(w / 2)}"/>`;
+    case 'appl':
+      if (type === 'hob') return rect(X, Y, w, h, 'f-dark', 3) + `<circle class="f-line" cx="${r2(-w / 4)}" cy="0" r="9"/><circle class="f-line" cx="${r2(w / 4)}" cy="0" r="9"/>`;
+      if (type === 'oven_black') return rect(X, Y, w, h, 'f-dark', 3);
+      if (type === 'steam_oven') return rect(X, Y, w, h, 'f-white', 3);
+      if (type === 'rice_cooker') return `<circle class="f-white" cx="0" cy="0" r="${r2(w / 2)}"/>`;
+      if (type === 'island_riser') return rect(X, Y, w, h, 'f-wood', 2);
+      if (type === 'orange_window') return rect(X, -3, w, 6, 'f-orange');
+      return '';
     case 'hood': return rect(X, Y, w, h, 'f-upper', 2);
     case 'teepee': return `<path class="f-tent" d="M 0 ${r2(Y)} L ${r2(X + w)} 0 L 0 ${r2(Y + h)} L ${r2(X)} 0 Z"/>`;
     case 'stripemat': return [0, 1, 2, 3, 4].map(i => rect(X, Y + i * h / 5, w, h / 5, i % 2 ? 'f-cushion' : 'f-white')).join('');
