@@ -77,10 +77,8 @@ g.item('fridge_black', -335, 748, 60, 62, 180); g.item('orange_window', -225, 79
 # 用餐區：焗爐矮櫃、矮櫃
 g.item('counter', 131, 752, 250, 70, 180); g.item('oven_black', 45, 757, 58, 45, 180); g.item('steam_oven', 115, 757, 48, 40, 180)
 g.item('tv_cabinet', 239, 647, 95, 38, 90)
-# 分享區：LED 電視（牆身）、枱椅、雪櫃
+# 分享區：LED 電視（牆身）、雪櫃（現場冇枱椅）
 g.item('tv', 197, 230, 120, 8, 90)
-g.item('meeting', 100, 250, 170, 90, 90)
-for y in (195, 300): g.item('chair', 27, y, 50, 50, 90); g.item('chair', 173, y, 50, 50, 270)
 g.item('fridge4', -37, 185, 120, 68, 270, 200)                              # 四門不鏽鋼雪櫃
 # 洗衣區：3 個高櫃（洗衣機＋乾衣機）、高櫃
 for y in (592, 668, 744): g.item('laundry_tower', 320, y, 72, 65, 270)
